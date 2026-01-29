@@ -8,3 +8,6 @@ venv/
 backend/.env
 flutter_instructor_app/.env
 flutter_student_app/.env
+
+# Local project context document
+GEMINI.md
