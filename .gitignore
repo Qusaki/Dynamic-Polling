@@ -1,0 +1,10 @@
+# Python virtual environment
+venv/
+
+# IDE files
+.idea/
+
+# Dotenv file in subdirectories
+backend/.env
+flutter_instructor_app/.env
+flutter_student_app/.env

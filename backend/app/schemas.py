@@ -1,0 +1,59 @@
+from pydantic import BaseModel, EmailStr
+from typing import List, Optional
+from .models import QuestionType
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+class OptionCreate(BaseModel):
+    text: str
+
+class QuestionCreate(BaseModel):
+    text: str
+    type: QuestionType
+    options: Optional[List[str]] = None
+
+class PollCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    questions: List[QuestionCreate]
+
+class PollCreateResponse(BaseModel):
+    poll_id: int
+    access_code: str
+
+class PollStatusUpdate(BaseModel):
+    is_active: bool
+
+class VoteCreate(BaseModel):
+    question_id: int
+    response_value: str
+
+class Option(BaseModel):
+    id: int
+    text: str
+
+    class Config:
+        orm_mode = True
+
+class Question(BaseModel):
+    id: int
+    text: str
+    type: QuestionType
+    order: int
+    options: List[Option] = []
+
+    class Config:
+        orm_mode = True
+
+class Poll(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    access_code: str
+    is_active: bool
+    questions: List[Question] = []
+
+    class Config:
+        orm_mode = True
