@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
@@ -18,6 +20,14 @@ app = FastAPI()
 
 origins = ["*"]
 
+class TokenRefreshMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if hasattr(request.state, "refreshed_token"):
+            response.headers["X-Refreshed-Token"] = request.state.refreshed_token
+        return response
+
+app.add_middleware(TokenRefreshMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

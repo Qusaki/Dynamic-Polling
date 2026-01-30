@@ -55,3 +55,37 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     if user is None:
         raise credentials_exception
     return user
+
+from fastapi import Request
+
+async def get_current_user_and_refresh_token(request: Request, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)) -> models.User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: Optional[str] = payload.get("sub")
+        exp: Optional[int] = payload.get("exp")
+        
+        if email is None or exp is None:
+            raise credentials_exception
+
+        # Refresh token if it's past half its life
+        token_lifetime = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        time_until_expiry = datetime.fromtimestamp(exp) - datetime.utcnow()
+
+        if time_until_expiry < (token_lifetime / 2):
+            new_token = create_access_token(data={"sub": email})
+            request.state.refreshed_token = new_token
+
+    except JWTError:
+        raise credentials_exception
+    
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    user = result.scalars().first()
+
+    if user is None:
+        raise credentials_exception
+    return user
