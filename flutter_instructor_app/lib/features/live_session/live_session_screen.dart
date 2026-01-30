@@ -31,7 +31,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   Map<int, Map<String, dynamic>> _tallies = {};
   WebSocketChannel? _channel;
   int _totalVotes = 0;
-  bool _isManuallyDisconnecting = false; // Flag to prevent navigation on manual refresh
+  bool _isManuallyDisconnecting = false;
 
   @override
   void initState() {
@@ -39,61 +39,70 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     _connectWebSocket();
   }
 
+  @override
+  void dispose() {
+    _disconnectWebSocket();
+    ref.invalidate(pollsProvider);
+    super.dispose();
+  }
+
   void _connectWebSocket() {
-    _isManuallyDisconnecting = false; // Reset flag on new connection
+    _isManuallyDisconnecting = false;
     final websocketBaseUrl = ApiService.websocketBaseUrl;
     final wsUrl = Uri.parse('$websocketBaseUrl/ws/polls/${widget.pollId}/instructor');
     
     _channel = WebSocketChannel.connect(wsUrl);
-
     _channel?.stream.listen(
-      (message) {
-        final decodedMessage = jsonDecode(message);
-        final type = decodedMessage['type'];
-        final data = decodedMessage['data'];
-
-        if (!mounted) return;
-
-        setState(() {
-          if (type == 'initial_state') {
-            _poll = app_models.Poll.fromJson(data['poll']);
-            _tallies = {
-              for (var t in data['tallies'])
-                t['question_id'] as int: t as Map<String, dynamic>
-            };
-            _updateTotalVotes();
-          } else if (type == 'tally_update') {
-            final questionId = data['question_id'] as int;
-            _tallies[questionId] = data as Map<String, dynamic>;
-            _updateTotalVotes();
-          }
-        });
-      },
-      onError: (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('WebSocket Error: $error')),
-          );
-          context.go('/dashboard');
-        }
-        _disconnectWebSocket();
-      },
-      onDone: () {
-        debugPrint('WebSocket connection done. Manual disconnect: $_isManuallyDisconnecting');
-        if (mounted && !_isManuallyDisconnecting) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Live session ended unexpectedly.')),
-           );
-           context.go('/dashboard');
-        }
-      },
+      _handleWebSocketMessage,
+      onError: _handleWebSocketError,
+      onDone: _handleWebSocketDone,
     );
   }
 
   void _disconnectWebSocket() {
-    _isManuallyDisconnecting = true; // Set flag before manually closing
+    _isManuallyDisconnecting = true;
     _channel?.sink.close();
     _channel = null;
+  }
+
+  void _handleWebSocketMessage(dynamic message) {
+    if (!mounted) return;
+
+    final decodedMessage = jsonDecode(message);
+    final type = decodedMessage['type'];
+    final data = decodedMessage['data'];
+
+    setState(() {
+      if (type == 'initial_state') {
+        _poll = app_models.Poll.fromJson(data['poll']);
+        _tallies = {
+          for (var t in data['tallies'])
+            t['question_id'] as int: t as Map<String, dynamic>
+        };
+      } else if (type == 'tally_update') {
+        final questionId = data['question_id'] as int;
+        _tallies[questionId] = data as Map<String, dynamic>;
+      }
+      _updateTotalVotes();
+    });
+  }
+
+  void _handleWebSocketError(dynamic error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('WebSocket Error: $error')),
+    );
+    context.go('/dashboard');
+    _disconnectWebSocket();
+  }
+
+  void _handleWebSocketDone() {
+    if (mounted && !_isManuallyDisconnecting) {
+       ScaffoldMessenger.of(context).showSnackBar(
+         const SnackBar(content: Text('Live session ended unexpectedly.')),
+       );
+       context.go('/dashboard');
+    }
   }
 
   void _updateTotalVotes() {
@@ -108,19 +117,10 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     _totalVotes = total;
   }
 
-  @override
-  void dispose() {
-    _disconnectWebSocket();
-    ref.invalidate(pollsProvider); // Invalidate the polls list on dispose
-    super.dispose();
-  }
-
   void _showShareDialog() {
     if (_poll == null) return;
 
-    const studentAppBaseUrl = 'http://localhost:3000'; 
-    final pollUrl = '$studentAppBaseUrl/join/${_poll!.access_code}';
-
+    final pollUrl = '${ApiService.studentAppBaseUrl}/join/${_poll!.access_code}';
     showDialog(
       context: context,
       builder: (context) {
@@ -131,11 +131,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                QrImageView(
-                  data: pollUrl,
-                  version: QrVersions.auto,
-                  size: 200.0,
-                ),
+                QrImageView(data: pollUrl, version: QrVersions.auto, size: 200.0),
                 const SizedBox(height: 16),
                 SelectableText(pollUrl),
               ],
@@ -162,128 +158,133 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     );
   }
 
+  void _onToggleActive(bool value) async {
+    if (_poll == null) return;
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.updatePollStatus(int.parse(widget.pollId), value);
+      if (mounted) {
+        setState(() {
+          _poll = _poll!.copyWith(is_active: value);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Poll status updated to ${value ? "Active" : "Inactive"}.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update poll status: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  void _onManagePoll() async {
+    if (_poll == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Poll data not available to manage.')),
+      );
+      return;
+    }
+    if (_poll!.is_active) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please stop the live session first before editing questions.')),
+      );
+      return;
+    }
+    
+    final result = await context.push('/poll/${_poll!.id}/manage');
+    if (result == true && mounted) {
+      _disconnectWebSocket();
+      _connectWebSocket();
+    }
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: Text('${_poll!.title} (Live)'),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: Chip(
+            avatar: const Icon(Icons.people),
+            label: Text('$_totalVotes Votes'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: _poll!.questions.length,
+      itemBuilder: (context, index) {
+        final question = _poll!.questions[index];
+        final tallyData = _tallies[question.id];
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.only(bottom: 16.0),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(question.text, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 24),
+                if (tallyData != null)
+                  ResultChartSelector(question: question, tallyData: tallyData)
+                else
+                  const Center(child: Text('No votes yet.')),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildFooter() {
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Accepting Votes'),
+              Switch(value: _poll!.is_active, onChanged: _onToggleActive),
+            ],
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.share),
+            label: const Text('Share'),
+            onPressed: _showShareDialog,
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.settings),
+            label: const Text('Manage'),
+            onPressed: _onManagePoll,
+          ),
+        ],
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_poll == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Live Session')),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${_poll!.title} (Live)'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Chip(
-              avatar: const Icon(Icons.people),
-              label: Text('$_totalVotes Votes'),
-            ),
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _poll!.questions.length,
-        itemBuilder: (context, index) {
-          final question = _poll!.questions[index];
-          final tallyData = _tallies[question.id];
-
-          return Card(
-            elevation: 4,
-            margin: const EdgeInsets.only(bottom: 16.0),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    question.text,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 24),
-                  if (tallyData != null)
-                    ResultChartSelector(
-                      question: question,
-                      tallyData: tallyData,
-                    )
-                  else
-                    const Center(child: Text('No votes yet.')),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-      persistentFooterButtons: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Accepting Votes'),
-                Switch(
-                  value: _poll!.is_active,
-                  onChanged: (value) async {
-                    if (_poll == null) return;
-                    try {
-                      final apiService = ref.read(apiServiceProvider);
-                      await apiService.updatePollStatus(int.parse(widget.pollId), value);
-                      if (mounted) {
-                        setState(() {
-                          _poll = _poll!.copyWith(is_active: value);
-                        });
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Poll status updated to ${value ? "Active" : "Inactive"}.')),
-                      );
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to update poll status: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
-            TextButton.icon(
-              icon: const Icon(Icons.share),
-              label: const Text('Share'),
-              onPressed: _showShareDialog,
-            ),
-            TextButton.icon(
-              icon: const Icon(Icons.settings),
-              label: const Text('Manage'),
-              onPressed: () async {
-                if (_poll != null) {
-                  if (_poll!.is_active) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please stop the live session first before editing questions.')),
-                    );
-                  } else {
-                    final result = await context.push('/poll/${_poll!.id}/manage');
-                    if (result == true && mounted) {
-                      _disconnectWebSocket();
-                      _connectWebSocket();
-                    }
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Poll data not available to manage.')),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-      ],
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+      persistentFooterButtons: _buildFooter(),
     );
   }
 }

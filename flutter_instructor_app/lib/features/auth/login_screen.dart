@@ -30,11 +30,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    // Step 1: Set _isLoading = true (Show spinner).
     setState(() => _isLoading = true);
 
     final apiService = ref.read(apiServiceProvider);
-    bool isLoggedIn = false; // Renamed 'success' to 'isLoggedIn' as per user request for clarity.
+    bool isLoggedIn = false;
 
     try {
       if (_isRegistering) {
@@ -43,36 +42,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _passwordController.text.trim(),
         );
         if (registered) {
-          // After successful registration, attempt to log in
-          isLoggedIn = await apiService.login( // Step 2: AWAIT apiService.login
+          isLoggedIn = await apiService.login(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
         }
       } else {
-        isLoggedIn = await apiService.login( // Step 2: AWAIT apiService.login
+        isLoggedIn = await apiService.login(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
       }
     } finally {
-      // Step 3: Set _isLoading = false. This is done in finally to ensure it always happens.
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
 
-    // Step 4: Add a print statement: `print("LOGIN RESULT: $isLoggedIn");`
-    print("LOGIN RESULT: $isLoggedIn");
-
-    // Step 5: Check logic:
     if (mounted) {
       if (isLoggedIn == true) {
-        ref.invalidate(pollsProvider); // Refresh dashboard data
-        context.go('/dashboard'); // Using context.go for go_router navigation
+        ref.invalidate(pollsProvider);
+        context.go('/dashboard');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login Failed. Check console.")),
+          const SnackBar(content: Text("Login Failed. Please check your credentials.")), // Updated message
         );
       }
     }

@@ -145,218 +145,105 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
   Future<void> _showQuestionFormDialog({required app_models.QuestionType type, app_models.Question? questionToEdit}) async {
-    // --- DEBUGGING ---
-    if (questionToEdit != null) {
-      print('--- Editing Question ---');
-      print('Question Text: ${questionToEdit.text}');
-      print('Question Options: ${questionToEdit.options.map((o) => o.text).toList()}');
-      print('--------------------');
-    }
-    // --- END DEBUGGING ---
-    
     final isEditing = questionToEdit != null;
     app_models.Question? savedQuestionData;
 
-
-
     await showDialog(
-
       context: context,
-
       builder: (ctx) {
-
         Widget form;
-
         String title;
 
-
-
         switch (type) {
-
           case app_models.QuestionType.multiple_choice:
-
             title = isEditing ? 'Edit Multiple Choice' : 'Add Multiple Choice';
-
             form = CreateMultipleChoiceForm(
-
               initialQuestion: questionToEdit,
-
               onSave: (data) {
-
                 savedQuestionData = app_models.Question(
-
                   id: isEditing ? questionToEdit!.id : 0,
-
                   order: isEditing ? questionToEdit!.order : (_poll?.questions.length ?? 0),
-
                   type: app_models.QuestionType.multiple_choice,
-
                   text: data.questionText,
-
                   options: data.options.map((o) => app_models.Option(id: 0, text: o)).toList(),
-
                 );
-
                 Navigator.pop(ctx);
-
               },
-
             );
-
             break;
-
           case app_models.QuestionType.rating:
-
             title = isEditing ? 'Edit Rating' : 'Add Rating';
-
             form = CreateRatingPollForm(
-
               initialQuestion: questionToEdit,
-
               onSave: (data) {
-
                 savedQuestionData = app_models.Question(
-
                   id: isEditing ? questionToEdit!.id : 0,
-
                   order: isEditing ? questionToEdit!.order : (_poll?.questions.length ?? 0),
-
                   type: app_models.QuestionType.rating,
-
                   text: data.questionText,
-
                   options: [],
-
                 );
-
                 Navigator.pop(ctx);
-
               },
-
             );
-
             break;
-
           case app_models.QuestionType.open_ended:
-
             title = isEditing ? 'Edit Open-Ended' : 'Add Open-Ended';
-
             form = CreateOpenEndedForm(
-
               initialQuestion: questionToEdit,
-
               onSave: (data) {
-
                 savedQuestionData = app_models.Question(
-
                   id: isEditing ? questionToEdit!.id : 0,
-
                   order: isEditing ? questionToEdit!.order : (_poll?.questions.length ?? 0),
-
                   type: app_models.QuestionType.open_ended,
-
                   text: data.questionText,
-
                   options: [],
-
                 );
-
                 Navigator.pop(ctx);
-
               },
-
             );
-
             break;
-
         }
 
-
-
-                return AlertDialog(
-
-
-
-                  title: Text(title),
-
-
-
-                  content: SizedBox(
-
-
-
-                    width: double.maxFinite,
-
-
-
-                    child: SingleChildScrollView(child: form),
-
-
-
-                  ),
-
-
-
-                  actions: [
-
-
-
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-
-
-
-                  ],
-
-
-
-                );
-
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(child: form),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ],
+        );
       },
-
     );
 
-
-
-    if (savedQuestionData != null && _poll != null) {
-
-      try {
-
-        final apiService = ref.read(apiServiceProvider);
-
-        if (isEditing) {
-
-          await apiService.updateQuestion(int.parse(widget.pollId), questionToEdit!.id, savedQuestionData!);
-
-        } else {
-
-          await apiService.addQuestionToPoll(int.parse(widget.pollId), savedQuestionData!);
-
-        }
-
-        setState(() {
-
-          _hasMadeChanges = true;
-
-        });
-
-        await _fetchPollDetails();
-
-      } catch (e) {
-
-        if (mounted) {
-
-          ScaffoldMessenger.of(context).showSnackBar(
-
-            SnackBar(content: Text('Failed to save question: ${e.toString()}')),
-
-          );
-
-        }
-
-      }
-
+    if (savedQuestionData != null) {
+      await _handleQuestionSave(savedQuestionData!, isEditing, questionToEdit);
     }
+  }
 
+  Future<void> _handleQuestionSave(app_models.Question savedQuestionData, bool isEditing, app_models.Question? questionToEdit) async {
+    if (_poll == null) return;
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      if (isEditing) {
+        await apiService.updateQuestion(int.parse(widget.pollId), questionToEdit!.id, savedQuestionData);
+      } else {
+        await apiService.addQuestionToPoll(int.parse(widget.pollId), savedQuestionData);
+      }
+      setState(() {
+        _hasMadeChanges = true;
+      });
+      await _fetchPollDetails();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save question: ${e.toString()}')),
+        );
+      }
+    }
   }
 
 
@@ -761,45 +648,15 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
-  @override
+    @override
 
-  Widget build(BuildContext context) {
 
-    if (_isLoading) {
 
-      return Scaffold(
+    Widget build(BuildContext context) {
 
-        appBar: AppBar(title: const Text('Manage Poll')),
 
-        body: const Center(child: CircularProgressIndicator()),
 
-      );
-
-    }
-
-    if (_errorMessage != null) {
-
-      return Scaffold(
-
-        appBar: AppBar(title: const Text('Manage Poll')),
-
-        body: Center(child: Text(_errorMessage!)),
-
-      );
-
-    }
-
-    if (_poll == null) {
-
-      return Scaffold(
-
-        appBar: AppBar(title: const Text('Manage Poll')),
-
-        body: const Center(child: Text('Poll not found.')),
-
-      );
-
-    }
+      if (_isLoading) {
 
 
 
@@ -807,173 +664,399 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
-          appBar: AppBar(
+          appBar: AppBar(title: const Text('Manage Poll')),
 
 
 
-            title: Text('Manage: ${_poll!.title}'),
+          body: const Center(child: CircularProgressIndicator()),
 
 
 
-            actions: [
+        );
 
 
 
-              IconButton(
+      }
 
 
 
-                icon: const Icon(Icons.edit),
+  
 
 
 
-                tooltip: 'Edit Poll Details',
+      if (_errorMessage != null) {
 
 
 
-                onPressed: _showEditPollDialog,
+        return Scaffold(
 
 
 
-              ),
+          appBar: AppBar(title: const Text('Manage Poll')),
 
 
 
-            ],
+          body: Center(child: Text(_errorMessage!)),
 
 
 
-          ),
+        );
 
-      body: Padding(
 
-        padding: const EdgeInsets.all(16.0),
 
-        child: Column(
+      }
 
-          crossAxisAlignment: CrossAxisAlignment.start,
 
-          children: [
 
-            Text('Poll ID: ${_poll!.id}', style: Theme.of(context).textTheme.bodySmall),
+  
 
-            Text('Access Code: ${_poll!.access_code}', style: Theme.of(context).textTheme.bodySmall),
 
-            const SizedBox(height: 16),
 
-            Text('Questions', style: Theme.of(context).textTheme.titleLarge),
+      if (_poll == null) {
 
-            const Divider(),
 
-            Expanded(
 
-              child: ListView.builder(
+        return Scaffold(
 
-                itemCount: _poll!.questions.length,
 
-                itemBuilder: (context, index) {
 
-                  final question = _poll!.questions[index];
+          appBar: AppBar(title: const Text('Manage Poll')),
 
-                  return Card(
 
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
 
-                    child: ListTile(
+          body: const Center(child: Text('Poll not found.')),
 
-                      leading: Icon(_getIconForType(question.type)),
 
-                      title: Text(question.text),
 
-                      subtitle: Text('Type: ${question.type.name.replaceAll('_', ' ').toUpperCase()}'),
+        );
 
-                      trailing: Row(
 
-                        mainAxisSize: MainAxisSize.min,
 
-                        children: [
+      }
 
-                          IconButton(
 
-                            icon: const Icon(Icons.edit),
 
-                            onPressed: () => _showQuestionFormDialog(
+  
 
-                              type: question.type,
 
-                              questionToEdit: question,
 
-                            ),
+      return Scaffold(
 
-                          ),
 
-                          IconButton(
 
-                            icon: const Icon(Icons.delete, color: Colors.red),
+        appBar: AppBar(
 
-                            onPressed: () => _deleteQuestion(question.id),
 
-                          ),
 
-                        ],
+          title: Text('Manage: ${_poll!.title}'),
 
-                      ),
 
-                    ),
 
-                  );
+          actions: [
 
-                },
 
-              ),
+
+            IconButton(
+
+
+
+              icon: const Icon(Icons.edit),
+
+
+
+              tooltip: 'Edit Poll Details',
+
+
+
+              onPressed: _showEditPollDialog,
+
+
 
             ),
 
-            const SizedBox(height: 20),
 
-            SizedBox(
-
-              width: double.infinity,
-
-              child: ElevatedButton.icon(
-
-                onPressed: () {
-
-                  context.pop(_hasMadeChanges);
-
-                },
-
-                icon: const Icon(Icons.arrow_back),
-
-                label: const Text('Back to Live Session'),
-
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
-
-              ),
-
-            ),
-
-            const SizedBox(height: 80),
 
           ],
 
+
+
         ),
 
-      ),
 
-      floatingActionButton: FloatingActionButton.extended(
 
-        onPressed: _showAddQuestionSheet,
+        body: _buildBody(),
 
-        label: const Text('Add Question'),
 
-        icon: const Icon(Icons.add),
 
-      ),
+        floatingActionButton: FloatingActionButton.extended(
 
-    );
 
-  }
+
+          onPressed: _showAddQuestionSheet,
+
+
+
+          label: const Text('Add Question'),
+
+
+
+          icon: const Icon(Icons.add),
+
+
+
+        ),
+
+
+
+      );
+
+
+
+    }
+
+
+
+  
+
+
+
+    Widget _buildBody() {
+
+
+
+      return Padding(
+
+
+
+        padding: const EdgeInsets.all(16.0),
+
+
+
+        child: Column(
+
+
+
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+
+
+          children: [
+
+
+
+            Text('Poll ID: ${_poll!.id}', style: Theme.of(context).textTheme.bodySmall),
+
+
+
+            Text('Access Code: ${_poll!.access_code}', style: Theme.of(context).textTheme.bodySmall),
+
+
+
+            const SizedBox(height: 16),
+
+
+
+            Text('Questions', style: Theme.of(context).textTheme.titleLarge),
+
+
+
+            const Divider(),
+
+
+
+            Expanded(
+
+
+
+              child: ListView.builder(
+
+
+
+                itemCount: _poll!.questions.length,
+
+
+
+                itemBuilder: (context, index) {
+
+
+
+                  final question = _poll!.questions[index];
+
+
+
+                  return Card(
+
+
+
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+
+
+
+                    child: ListTile(
+
+
+
+                      leading: Icon(_getIconForType(question.type)),
+
+
+
+                      title: Text(question.text),
+
+
+
+                      subtitle: Text('Type: ${question.type.name.replaceAll('_', ' ').toUpperCase()}'),
+
+
+
+                      trailing: Row(
+
+
+
+                        mainAxisSize: MainAxisSize.min,
+
+
+
+                        children: [
+
+
+
+                          IconButton(
+
+
+
+                            icon: const Icon(Icons.edit),
+
+
+
+                            onPressed: () => _showQuestionFormDialog(
+
+
+
+                              type: question.type,
+
+
+
+                              questionToEdit: question,
+
+
+
+                            ),
+
+
+
+                          ),
+
+
+
+                          IconButton(
+
+
+
+                            icon: const Icon(Icons.delete, color: Colors.red),
+
+
+
+                            onPressed: () => _deleteQuestion(question.id),
+
+
+
+                          ),
+
+
+
+                        ],
+
+
+
+                      ),
+
+
+
+                    ),
+
+
+
+                  );
+
+
+
+                },
+
+
+
+              ),
+
+
+
+            ),
+
+
+
+            const SizedBox(height: 20),
+
+
+
+            SizedBox(
+
+
+
+              width: double.infinity,
+
+
+
+              child: ElevatedButton.icon(
+
+
+
+                onPressed: () {
+
+
+
+                  context.pop(_hasMadeChanges);
+
+
+
+                },
+
+
+
+                icon: const Icon(Icons.arrow_back),
+
+
+
+                label: const Text('Back to Live Session'),
+
+
+
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
+
+
+
+              ),
+
+
+
+            ),
+
+
+
+            const SizedBox(height: 80),
+
+
+
+          ],
+
+
+
+        ),
+
+
+
+      );
+
+
+
+    }
 
 
 

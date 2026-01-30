@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class PollCard extends StatelessWidget {
   final String title;
-  final String? description; // New parameter
+  final String? description;
   final String status;
   final String date;
   final VoidCallback onTap;
@@ -12,7 +12,7 @@ class PollCard extends StatelessWidget {
   const PollCard({
     super.key,
     required this.title,
-    this.description, // New parameter
+    this.description,
     required this.status,
     required this.date,
     required this.onTap,

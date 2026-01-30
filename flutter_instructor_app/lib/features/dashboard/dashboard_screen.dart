@@ -109,13 +109,11 @@ class DashboardScreen extends ConsumerWidget {
                 description: poll.description,
                 status: poll.is_active ? 'Active' : 'Closed',
                 date: DateFormat('yyyy-MM-dd HH:mm').format(poll.created_at),
-                              onTap: () async {
-                                await context.push('/poll/${poll.id}');
-                                // After returning from the live session, invalidate the provider
-                                // to get the latest status.
-                                ref.invalidate(pollsProvider);
-                              },
-                              onEdit: () => _showEditPollDialog(context, ref, poll),                onDelete: () async {
+                                            onTap: () async {
+                                              await context.push('/poll/${poll.id}');
+                                              ref.invalidate(pollsProvider);
+                                            },
+                                            onEdit: () => _showEditPollDialog(context, ref, poll),                onDelete: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(

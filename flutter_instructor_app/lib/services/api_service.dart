@@ -1,9 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter/foundation.dart'; // Import everything to include debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:universal_io/io.dart';
 import '../models/poll_models.dart';
+
+/// A private class to hold all API endpoint paths as constants.
+class _ApiEndpoints {
+  static const String register = '/auth/register';
+  static const String token = '/auth/token';
+  static const String polls = '/polls';
+  static const String createPoll = '/polls/create';
+  static String pollById(int id) => '/polls/$id';
+  static String pollStatus(int id) => '/polls/$id/active';
+  static String addQuestion(int pollId) => '/polls/$pollId/question';
+  static String questionById(int pollId, int questionId) => '/polls/$pollId/question/$questionId';
+}
 
 class ApiService {
   static final String _baseUrl = kIsWeb
@@ -16,7 +28,10 @@ class ApiService {
       ? 'ws://127.0.0.1:8000'
       : Platform.isAndroid
       ? 'ws://10.0.2.2:8000'
-      : 'ws://127.0.0.1:8000';
+      : 'http://127.0.0.1:8000';
+  
+  static const String studentAppBaseUrl = 'http://localhost:3000'; // New constant
+
 
   final _storage = const FlutterSecureStorage();
 
@@ -72,7 +87,6 @@ class ApiService {
     final refreshedToken = response.headers['x-refreshed-token'];
     if (refreshedToken != null) {
       await _storage.write(key: 'access_token', value: refreshedToken);
-      debugPrint('--- Access token refreshed ---');
     }
 
     // Handle auth errors
@@ -86,7 +100,7 @@ class ApiService {
 
   Future<bool> register(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/auth/register'),
+      Uri.parse('$_baseUrl${_ApiEndpoints.register}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -95,7 +109,7 @@ class ApiService {
 
   Future<bool> login(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/auth/token'),
+      Uri.parse('$_baseUrl${_ApiEndpoints.token}'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: {'username': email, 'password': password},
     );
@@ -113,7 +127,7 @@ class ApiService {
   }
 
   Future<List<Poll>> fetchMyPolls() async {
-    final response = await _makeAuthenticatedRequest('GET', '/polls');
+    final response = await _makeAuthenticatedRequest('GET', _ApiEndpoints.polls);
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => Poll.fromJson(json)).toList();
@@ -123,7 +137,7 @@ class ApiService {
   }
 
   Future<Poll> getPoll(int pollId) async {
-    final response = await _makeAuthenticatedRequest('GET', '/polls/$pollId');
+    final response = await _makeAuthenticatedRequest('GET', _ApiEndpoints.pollById(pollId));
     if (response.statusCode == 200) {
       return Poll.fromJson(jsonDecode(response.body));
     } else {
@@ -132,17 +146,13 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createPoll(String title, String? description, List<Question> questions) async {
-    final body = {
+    final body = jsonEncode({
       'title': title,
       'description': description,
-      'questions': questions.map((q) => {
-        'text': q.text,
-        'type': describeEnum(q.type).toUpperCase(),
-        'options': q.options.map((opt) => opt.text).toList(),
-      }).toList(),
-    };
+      'questions': questions.map((q) => q.toJson()).toList(),
+    });
 
-    final response = await _makeAuthenticatedRequest('POST', '/polls/create', body: jsonEncode(body));
+    final response = await _makeAuthenticatedRequest('POST', _ApiEndpoints.createPoll, body: body);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -154,7 +164,7 @@ class ApiService {
   Future<void> updatePollStatus(int pollId, bool isActive) async {
     final response = await _makeAuthenticatedRequest(
       'PATCH',
-      '/polls/$pollId/active',
+      _ApiEndpoints.pollStatus(pollId),
       body: jsonEncode({'is_active': isActive}),
     );
 
@@ -166,7 +176,7 @@ class ApiService {
   Future<Poll> updatePollDetails(int pollId, String title, String? description) async {
     final response = await _makeAuthenticatedRequest(
       'PUT',
-      '/polls/$pollId',
+      _ApiEndpoints.pollById(pollId),
       body: jsonEncode({'title': title, 'description': description}),
     );
 
@@ -178,23 +188,18 @@ class ApiService {
   }
 
   Future<void> deletePoll(int pollId) async {
-    final response = await _makeAuthenticatedRequest('DELETE', '/polls/$pollId');
+    final response = await _makeAuthenticatedRequest('DELETE', _ApiEndpoints.pollById(pollId));
     if (response.statusCode != 204) {
       throw Exception('Failed to delete poll. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
   Future<Question> updateQuestion(int pollId, int questionId, Question question) async {
-    final body = {
-      'text': question.text,
-      'type': describeEnum(question.type).toUpperCase(),
-      'options': question.options.map((opt) => opt.text).toList(),
-    };
-
+    final body = jsonEncode(question.toJson());
     final response = await _makeAuthenticatedRequest(
       'PUT',
-      '/polls/$pollId/question/$questionId',
-      body: jsonEncode(body),
+      _ApiEndpoints.questionById(pollId, questionId),
+      body: body,
     );
 
     if (response.statusCode == 200) {
@@ -205,23 +210,18 @@ class ApiService {
   }
 
   Future<void> deleteQuestion(int pollId, int questionId) async {
-    final response = await _makeAuthenticatedRequest('DELETE', '/polls/$pollId/question/$questionId');
+    final response = await _makeAuthenticatedRequest('DELETE', _ApiEndpoints.questionById(pollId, questionId));
     if (response.statusCode != 204) {
       throw Exception('Failed to delete question. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
   Future<Question> addQuestionToPoll(int pollId, Question question) async {
-    final body = {
-      'text': question.text,
-      'type': describeEnum(question.type).toUpperCase(),
-      'options': question.options.map((opt) => opt.text).toList(),
-    };
-
+    final body = jsonEncode(question.toJson());
     final response = await _makeAuthenticatedRequest(
       'POST',
-      '/polls/$pollId/question',
-      body: jsonEncode(body),
+      _ApiEndpoints.addQuestion(pollId),
+      body: body,
     );
 
     if (response.statusCode == 200) {

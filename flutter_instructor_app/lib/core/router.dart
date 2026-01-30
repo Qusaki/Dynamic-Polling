@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Import your screen files here
-import 'package:flutter_instructor_app/features/splash/splash_screen.dart';
 import 'package:flutter_instructor_app/features/auth/login_screen.dart';
 import 'package:flutter_instructor_app/features/dashboard/dashboard_screen.dart';
-import 'package:flutter_instructor_app/features/live_session/live_session_screen.dart'; // Corrected import
+import 'package:flutter_instructor_app/features/live_session/live_session_screen.dart';
 import 'package:flutter_instructor_app/features/create_poll/create_multi_question_poll_screen.dart';
-import 'package:flutter_instructor_app/features/poll_management/poll_management_screen.dart'; // New import
+import 'package:flutter_instructor_app/features/poll_management/poll_management_screen.dart';
 
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -17,7 +15,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => const LoginScreen(), // Changed to LoginScreen
       ),
       GoRoute(
         path: '/login',
@@ -32,12 +30,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CreateMultiQuestionPollScreen(),
       ),
       GoRoute(
-        path: '/poll/:id', // This path now correctly leads to the live session
+        path: '/poll/:id',
         builder: (context, state) {
           final pollId = state.pathParameters['id']!;
           return LiveSessionScreen(pollId: pollId);
         },
-        routes: [ // Nested route for poll management
+        routes: [
           GoRoute(
             path: 'manage',
             builder: (context, state) {

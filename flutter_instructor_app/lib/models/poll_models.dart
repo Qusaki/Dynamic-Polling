@@ -54,11 +54,9 @@ class Question {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'text': text,
       'type': describeEnum(type).toUpperCase(),
-      'order': order,
-      'options': options.map((o) => o.toJson()).toList(),
+      'options': options.map((o) => o.text).toList(),
     };
   }
 }
@@ -69,7 +67,7 @@ class Poll {
   final String? description;
   final String access_code;
   final bool is_active;
-  final DateTime created_at; // New field
+  final DateTime created_at;
   final List<Question> questions;
 
   Poll({
@@ -78,7 +76,7 @@ class Poll {
     this.description,
     required this.access_code,
     required this.is_active,
-    required this.created_at, // New field
+    required this.created_at,
     required this.questions,
   });
 
@@ -89,7 +87,7 @@ class Poll {
       description: json['description'],
       access_code: json['access_code'],
       is_active: json['is_active'],
-      created_at: DateTime.parse(json['created_at']), // Parse the datetime string
+      created_at: DateTime.parse(json['created_at']),
       questions: (json['questions'] as List)
           .map((i) => Question.fromJson(i))
           .toList(),
@@ -103,7 +101,7 @@ class Poll {
       'description': description,
       'access_code': access_code,
       'is_active': is_active,
-      'created_at': created_at.toIso8601String(), // Serialize to ISO 8601 string
+      'created_at': created_at.toIso8601String(),
       'questions': questions.map((q) => q.toJson()).toList(),
     };
   }
@@ -114,7 +112,7 @@ class Poll {
     String? description,
     String? access_code,
     bool? is_active,
-    DateTime? created_at, // New field in copyWith
+    DateTime? created_at,
     List<Question>? questions,
   }) {
     return Poll(

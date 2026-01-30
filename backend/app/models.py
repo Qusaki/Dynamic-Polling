@@ -30,7 +30,7 @@ class Poll(Base):
     instructor_id = Column(Integer, ForeignKey("users.id"))
     access_code = Column(String, unique=True, index=True, nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now()) # New field
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     instructor = relationship("User", back_populates="polls")
     questions = relationship("Question", back_populates="poll", cascade="all, delete")
 

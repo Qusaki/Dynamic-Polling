@@ -23,14 +23,6 @@ class _CreateMultipleChoiceFormState extends State<CreateMultipleChoiceForm> {
   @override
   void initState() {
     super.initState();
-    // --- DEBUGGING ---
-    print('--- CreateMultipleChoiceForm initState ---');
-    print('Initial question text: ${widget.initialQuestion?.text}');
-    print('Initial options count: ${widget.initialQuestion?.options.length}');
-    print('Initial options: ${widget.initialQuestion?.options.map((o) => o.text).toList()}');
-    print('------------------------------------');
-    // --- END DEBUGGING ---
-    
     _questionController = TextEditingController(text: widget.initialQuestion?.text ?? '');
     
     if (widget.initialQuestion != null && widget.initialQuestion!.options.isNotEmpty) {
