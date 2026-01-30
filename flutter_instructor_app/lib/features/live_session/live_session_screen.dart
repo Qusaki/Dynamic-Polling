@@ -28,9 +28,10 @@ class LiveSessionScreen extends ConsumerStatefulWidget {
 
 class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   app_models.Poll? _poll;
-  Map<int, Map<String, dynamic>> _tallies = {}; // Map: question_id -> tally_data
+  Map<int, Map<String, dynamic>> _tallies = {};
   WebSocketChannel? _channel;
-  int _totalVotes = 0; // To track total participant count
+  int _totalVotes = 0;
+  bool _isManuallyDisconnecting = false; // Flag to prevent navigation on manual refresh
 
   @override
   void initState() {
@@ -39,7 +40,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   }
 
   void _connectWebSocket() {
-    final websocketBaseUrl = ApiService.websocketBaseUrl; // Assumes ApiService provides this
+    _isManuallyDisconnecting = false; // Reset flag on new connection
+    final websocketBaseUrl = ApiService.websocketBaseUrl;
     final wsUrl = Uri.parse('$websocketBaseUrl/ws/polls/${widget.pollId}/instructor');
     
     _channel = WebSocketChannel.connect(wsUrl);
@@ -55,7 +57,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         setState(() {
           if (type == 'initial_state') {
             _poll = app_models.Poll.fromJson(data['poll']);
-            // Convert list of tallies to map for easier access
             _tallies = {
               for (var t in data['tallies'])
                 t['question_id'] as int: t as Map<String, dynamic>
@@ -73,25 +74,24 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('WebSocket Error: $error')),
           );
+          context.go('/dashboard');
         }
         _disconnectWebSocket();
-        if (mounted) context.go('/dashboard'); // Go back to dashboard on WS error
       },
       onDone: () {
-        debugPrint('WebSocket connection done.');
-        _disconnectWebSocket();
-        if (mounted) {
-           // Optionally show a message
+        debugPrint('WebSocket connection done. Manual disconnect: $_isManuallyDisconnecting');
+        if (mounted && !_isManuallyDisconnecting) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Live session ended.')),
+             const SnackBar(content: Text('Live session ended unexpectedly.')),
            );
-           context.go('/dashboard'); // Go back to dashboard if done is unexpected
+           context.go('/dashboard');
         }
       },
     );
   }
 
   void _disconnectWebSocket() {
+    _isManuallyDisconnecting = true; // Set flag before manually closing
     _channel?.sink.close();
     _channel = null;
   }
@@ -117,7 +117,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   void _showShareDialog() {
     if (_poll == null) return;
 
-    // As per GEMINI.md, student app runs on port 3000 and uses /join/:access_code path
     const studentAppBaseUrl = 'http://localhost:3000'; 
     final pollUrl = '$studentAppBaseUrl/join/${_poll!.access_code}';
 
@@ -206,7 +205,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 24),
-                  if (tallyData != null) // Only show chart if tally data is available
+                  if (tallyData != null)
                     ResultChartSelector(
                       question: question,
                       tallyData: tallyData,
@@ -234,7 +233,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                     try {
                       final apiService = ref.read(apiServiceProvider);
                       await apiService.updatePollStatus(int.parse(widget.pollId), value);
-                      // Optimistically update the UI after successful API call
                       if (mounted) {
                         setState(() {
                           _poll = _poll!.copyWith(is_active: value);
@@ -262,9 +260,19 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
             TextButton.icon(
               icon: const Icon(Icons.settings),
               label: const Text('Manage'),
-              onPressed: () {
+              onPressed: () async {
                 if (_poll != null) {
-                  context.push('/poll/${_poll!.id}/manage');
+                  if (_poll!.is_active) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please stop the live session first before editing questions.')),
+                    );
+                  } else {
+                    final result = await context.push('/poll/${_poll!.id}/manage');
+                    if (result == true && mounted) {
+                      _disconnectWebSocket();
+                      _connectWebSocket();
+                    }
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Poll data not available to manage.')),

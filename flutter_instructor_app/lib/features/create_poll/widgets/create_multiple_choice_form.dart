@@ -23,6 +23,14 @@ class _CreateMultipleChoiceFormState extends State<CreateMultipleChoiceForm> {
   @override
   void initState() {
     super.initState();
+    // --- DEBUGGING ---
+    print('--- CreateMultipleChoiceForm initState ---');
+    print('Initial question text: ${widget.initialQuestion?.text}');
+    print('Initial options count: ${widget.initialQuestion?.options.length}');
+    print('Initial options: ${widget.initialQuestion?.options.map((o) => o.text).toList()}');
+    print('------------------------------------');
+    // --- END DEBUGGING ---
+    
     _questionController = TextEditingController(text: widget.initialQuestion?.text ?? '');
     
     if (widget.initialQuestion != null && widget.initialQuestion!.options.isNotEmpty) {
@@ -64,69 +72,64 @@ class _CreateMultipleChoiceFormState extends State<CreateMultipleChoiceForm> {
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.4,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Make column shrink to its content
+        children: [
+          // The form fields are now direct children of the Column.
+          // The parent SingleChildScrollView in the dialog will handle scrolling.
+          TextFormField(
+            controller: _questionController,
+            decoration: const InputDecoration(labelText: 'Question', border: OutlineInputBorder()),
+            validator: (value) => (value?.isEmpty ?? true) ? 'Please enter a question.' : null,
+          ),
+          const SizedBox(height: 16),
+          Text('Answer Choices', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ..._optionControllers.asMap().entries.map((entry) {
+            int idx = entry.key;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
                 children: [
-                  TextFormField(
-                    controller: _questionController,
-                    decoration: const InputDecoration(labelText: 'Question', border: OutlineInputBorder()),
-                    validator: (value) => (value?.isEmpty ?? true) ? 'Please enter a question.' : null,
+                  Expanded(
+                    child: TextFormField(
+                      controller: entry.value,
+                      decoration: InputDecoration(labelText: 'Option ${idx + 1}', border: const OutlineInputBorder()),
+                      validator: (value) => (value?.isEmpty ?? true) ? 'Option cannot be empty.' : null,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text('Answer Choices', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  ..._optionControllers.asMap().entries.map((entry) {
-                    int idx = entry.key;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: entry.value,
-                              decoration: InputDecoration(labelText: 'Option ${idx + 1}', border: const OutlineInputBorder()),
-                              validator: (value) => (value?.isEmpty ?? true) ? 'Option cannot be empty.' : null,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () => _removeOption(idx),
-                            color: Colors.red,
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Option'),
-                    onPressed: _addOption,
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline),
+                    onPressed: () => _removeOption(idx),
+                    color: Colors.red,
                   ),
                 ],
               ),
+            );
+          }),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            icon: const Icon(Icons.add),
+            label: const Text('Add Option'),
+            onPressed: _addOption,
+          ),
+          const SizedBox(height: 16), // Add some space
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  widget.onSave((
+                    questionText: _questionController.text,
+                    options: _optionControllers.map((c) => c.text).where((s) => s.isNotEmpty).toList(),
+                  ));
+                }
+              },
+              child: Text(widget.initialQuestion == null ? 'Add Question' : 'Save Changes'),
             ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    widget.onSave((
-                      questionText: _questionController.text,
-                      options: _optionControllers.map((c) => c.text).where((s) => s.isNotEmpty).toList(),
-                    ));
-                  }
-                },
-                child: Text(widget.initialQuestion == null ? 'Add Question' : 'Save Changes'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

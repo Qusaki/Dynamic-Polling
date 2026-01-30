@@ -38,45 +38,38 @@ class _CreateOpenEndedFormState extends State<CreateOpenEndedForm> {
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.2,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                children: [
-                  TextFormField(
-                    controller: _questionController,
-                    decoration: const InputDecoration(labelText: 'Question', border: OutlineInputBorder()),
-                    validator: (value) => (value?.isEmpty ?? true) ? 'Please enter a question.' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _wordLimitController,
-                    decoration: const InputDecoration(labelText: 'Word Count Limit (Optional)', border: OutlineInputBorder()),
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Make column shrink to its content
+        children: [
+          TextFormField(
+            controller: _questionController,
+            decoration: const InputDecoration(labelText: 'Question', border: OutlineInputBorder()),
+            validator: (value) => (value?.isEmpty ?? true) ? 'Please enter a question.' : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _wordLimitController,
+            decoration: const InputDecoration(labelText: 'Word Count Limit (Optional)', border: OutlineInputBorder()),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16), // Add some space
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  final int? wordLimit = int.tryParse(_wordLimitController.text);
+                  widget.onSave((
+                    questionText: _questionController.text,
+                    wordLimit: wordLimit,
+                  ));
+                }
+              },
+              child: Text(widget.initialQuestion == null ? 'Add Question' : 'Save Changes'),
             ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final int? wordLimit = int.tryParse(_wordLimitController.text);
-                    widget.onSave((
-                      questionText: _questionController.text,
-                      wordLimit: wordLimit,
-                    ));
-                  }
-                },
-                child: Text(widget.initialQuestion == null ? 'Add Question' : 'Save Changes'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

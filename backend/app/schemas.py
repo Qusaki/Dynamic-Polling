@@ -35,17 +35,15 @@ class Option(BaseModel):
     text: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Question(BaseModel):
     id: int
     text: str
     type: QuestionType
     order: int
-    options: List[Option] = []
-
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Poll(BaseModel):
     id: int
@@ -56,4 +54,4 @@ class Poll(BaseModel):
     questions: List[Question] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

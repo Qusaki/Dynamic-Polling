@@ -45,6 +45,7 @@ class _CreateRatingPollFormState extends State<CreateRatingPollForm> {
     return Form(
       key: _formKey,
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Make column shrink to its content
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Poll Title Input

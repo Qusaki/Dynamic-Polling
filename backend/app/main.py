@@ -64,6 +64,23 @@ async def get_polls(db: AsyncSession = Depends(get_session), current_user: model
     polls = result.scalars().all()
     return polls
 
+@app.get("/polls/{poll_id}", response_model=schemas.Poll)
+async def get_poll(
+    poll_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    poll_result = await db.execute(
+        select(models.Poll).where(
+            models.Poll.id == poll_id,
+            models.Poll.instructor_id == current_user.id
+        ).options(selectinload(models.Poll.questions).selectinload(models.Question.options))
+    )
+    poll = poll_result.scalars().first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found or not owned by user")
+    return poll
+
 @app.post("/polls/create", response_model=schemas.PollCreateResponse)
 async def create_poll(poll_data: schemas.PollCreate, db: AsyncSession = Depends(get_session), current_user: models.User = Depends(auth.get_current_user)):
     access_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
