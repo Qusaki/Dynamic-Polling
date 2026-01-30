@@ -117,6 +117,52 @@ async def create_poll(poll_data: schemas.PollCreate, db: AsyncSession = Depends(
 
     return {"poll_id": new_poll.id, "access_code": new_poll.access_code}
 
+@app.put("/polls/{poll_id}", response_model=schemas.Poll)
+async def update_poll_details(
+    poll_id: int,
+    poll_data: schemas.PollUpdate,
+    db: AsyncSession = Depends(get_session),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    poll_result = await db.execute(
+        select(models.Poll).where(
+            models.Poll.id == poll_id,
+            models.Poll.instructor_id == current_user.id
+        ).options(selectinload(models.Poll.questions).selectinload(models.Question.options))
+    )
+    poll = poll_result.scalars().first()
+
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found or not owned by user")
+
+    poll.title = poll_data.title
+    poll.description = poll_data.description
+    db.add(poll)
+    await db.commit()
+    await db.refresh(poll)
+    return poll
+
+@app.delete("/polls/{poll_id}", status_code=204)
+async def delete_poll(
+    poll_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    poll_result = await db.execute(
+        select(models.Poll).where(
+            models.Poll.id == poll_id,
+            models.Poll.instructor_id == current_user.id
+        )
+    )
+    poll = poll_result.scalars().first()
+
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found or not owned by user")
+
+    await db.delete(poll)
+    await db.commit()
+    return {"message": "Poll deleted successfully"}
+
 @app.patch("/polls/{poll_id}/active", response_model=schemas.Poll)
 async def update_poll_active_status(
     poll_id: int,
@@ -377,6 +423,7 @@ async def websocket_endpoint(websocket: WebSocket, poll_id: str, db: AsyncSessio
             "description": poll.description,
             "access_code": poll.access_code,
             "is_active": poll.is_active,
+            "created_at": poll.created_at.isoformat(), # Add created_at field
             "questions": [
                 {
                     "id": q.id,

@@ -1,11 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
+import '../../models/poll_models.dart';
 import '../../providers/poll_provider.dart';
 import 'widgets/poll_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
+
+  Future<void> _showEditPollDialog(BuildContext context, WidgetRef ref, Poll poll) async {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: poll.title);
+    final descriptionController = TextEditingController(text: poll.description);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Poll Details'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Poll Title', border: OutlineInputBorder()),
+                validator: (value) => (value?.isEmpty ?? true) ? 'Title cannot be empty.' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: 'Description (Optional)', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved == true && context.mounted) {
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.updatePollDetails(
+          poll.id,
+          titleController.text,
+          descriptionController.text,
+        );
+        await ref.refresh(pollsProvider); // More direct way to refetch
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Poll details updated successfully!'))
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update poll details: $e'))
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,42 +94,83 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       body: pollsAsyncValue.when(
-        data: (polls) => ListView.builder(
-          padding: const EdgeInsets.all(8.0),
-          itemCount: polls.length,
-          itemBuilder: (context, index) {
-            final poll = polls[index];
-            return PollCard(
-              title: poll.title,
-              status: poll.is_active ? 'Active' : 'Closed',
-              date: 'N/A', // You might want to add a date to your poll model
-              onTap: () => context.push('/poll/${poll.id}'),
-            );
-          },
-        ),
+        data: (polls) {
+          // Sort polls by created_at in descending order (newest first)
+          final sortedPolls = List<Poll>.from(polls)
+            ..sort((a, b) => b.created_at.compareTo(a.created_at));
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
+            itemCount: sortedPolls.length,
+            itemBuilder: (context, index) {
+              final poll = sortedPolls[index];
+              return PollCard(
+                title: poll.title,
+                description: poll.description,
+                status: poll.is_active ? 'Active' : 'Closed',
+                date: DateFormat('yyyy-MM-dd HH:mm').format(poll.created_at),
+                              onTap: () async {
+                                await context.push('/poll/${poll.id}');
+                                // After returning from the live session, invalidate the provider
+                                // to get the latest status.
+                                ref.invalidate(pollsProvider);
+                              },
+                              onEdit: () => _showEditPollDialog(context, ref, poll),                onDelete: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Confirm Deletion'),
+                      content: Text('Are you sure you want to delete the poll "${poll.title}"? This action cannot be undone.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    try {
+                      final apiService = ref.read(apiServiceProvider);
+                      await apiService.deletePoll(poll.id);
+                      await ref.refresh(pollsProvider); // Refresh the list
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Poll deleted successfully.')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to delete poll: $e')),
+                        );
+                      }
+                    }
+                  }
+                },
+              );
+            },
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) {
-          // Check for the specific authentication error message.
           if (err.toString().contains('Token expired or invalid')) {
-            // Schedule the logout and redirection logic to run after the build.
             Future.microtask(() async {
-              // Show a snackbar message to the user.
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Session expired. Please log in again.')),
               );
-              // Perform logout
               final apiService = ref.read(apiServiceProvider);
               await apiService.logout();
               ref.invalidate(pollsProvider);
-              // Navigate to the login screen.
               if (context.mounted) {
                 context.go('/login');
               }
             });
-            // Show a loading indicator while redirecting.
             return const Center(child: CircularProgressIndicator());
           }
-          // For any other errors, display the error message.
           return Center(child: Text('Error: $err'));
         },
       ),

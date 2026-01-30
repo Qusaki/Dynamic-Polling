@@ -361,65 +361,403 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
-  Future<void> _deleteQuestion(int questionId) async {
-
-    final confirmed = await showDialog<bool>(
-
-      context: context,
-
-      builder: (ctx) => AlertDialog(
-
-        title: const Text('Confirm Delete'),
-
-        content: const Text('Are you sure you want to delete this question?'),
-
-        actions: [
-
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
-
-        ],
-
-      ),
-
-    );
+    Future<void> _deleteQuestion(int questionId) async {
 
 
 
-    if (confirmed == true) {
+      final confirmed = await showDialog<bool>(
 
-      try {
 
-        final apiService = ref.read(apiServiceProvider);
 
-        await apiService.deleteQuestion(int.parse(widget.pollId), questionId);
+        context: context,
 
-        setState(() {
 
-          _hasMadeChanges = true;
 
-        });
+        builder: (ctx) => AlertDialog(
 
-        await _fetchPollDetails();
 
-      } catch (e) {
 
-        if (mounted) {
+          title: const Text('Confirm Delete'),
 
-          ScaffoldMessenger.of(context).showSnackBar(
 
-            SnackBar(content: Text('Failed to delete question: $e')),
 
-          );
+          content: const Text('Are you sure you want to delete this question?'),
+
+
+
+          actions: [
+
+
+
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+
+
+
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+
+
+
+          ],
+
+
+
+        ),
+
+
+
+      );
+
+
+
+  
+
+
+
+      if (confirmed == true) {
+
+
+
+        try {
+
+
+
+          final apiService = ref.read(apiServiceProvider);
+
+
+
+          await apiService.deleteQuestion(int.parse(widget.pollId), questionId);
+
+
+
+          setState(() {
+
+
+
+            _hasMadeChanges = true;
+
+
+
+          });
+
+
+
+          await _fetchPollDetails();
+
+
+
+        } catch (e) {
+
+
+
+          if (mounted) {
+
+
+
+            ScaffoldMessenger.of(context).showSnackBar(
+
+
+
+              SnackBar(content: Text('Failed to delete question: $e')),
+
+
+
+            );
+
+
+
+          }
+
+
 
         }
 
+
+
       }
+
+
 
     }
 
-  }
+
+
+  
+
+
+
+    Future<void> _showEditPollDialog() async {
+
+
+
+      if (_poll == null) return;
+
+
+
+  
+
+
+
+      final formKey = GlobalKey<FormState>();
+
+
+
+      final titleController = TextEditingController(text: _poll!.title);
+
+
+
+      final descriptionController = TextEditingController(text: _poll!.description);
+
+
+
+  
+
+
+
+      final saved = await showDialog<bool>(
+
+
+
+        context: context,
+
+
+
+        builder: (ctx) => AlertDialog(
+
+
+
+          title: const Text('Edit Poll Details'),
+
+
+
+          content: Form(
+
+
+
+            key: formKey,
+
+
+
+            child: Column(
+
+
+
+              mainAxisSize: MainAxisSize.min,
+
+
+
+              children: [
+
+
+
+                TextFormField(
+
+
+
+                  controller: titleController,
+
+
+
+                  decoration: const InputDecoration(labelText: 'Poll Title', border: OutlineInputBorder()),
+
+
+
+                  validator: (value) => (value?.isEmpty ?? true) ? 'Title cannot be empty.' : null,
+
+
+
+                ),
+
+
+
+                const SizedBox(height: 16),
+
+
+
+                TextFormField(
+
+
+
+                  controller: descriptionController,
+
+
+
+                  decoration: const InputDecoration(labelText: 'Description (Optional)', border: OutlineInputBorder()),
+
+
+
+                ),
+
+
+
+              ],
+
+
+
+            ),
+
+
+
+          ),
+
+
+
+          actions: [
+
+
+
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+
+
+
+            ElevatedButton(
+
+
+
+              onPressed: () {
+
+
+
+                if (formKey.currentState!.validate()) {
+
+
+
+                  Navigator.pop(ctx, true);
+
+
+
+                }
+
+
+
+              },
+
+
+
+              child: const Text('Save'),
+
+
+
+            ),
+
+
+
+          ],
+
+
+
+        ),
+
+
+
+      );
+
+
+
+  
+
+
+
+      if (saved == true) {
+
+
+
+        try {
+
+
+
+          final apiService = ref.read(apiServiceProvider);
+
+
+
+          final updatedPoll = await apiService.updatePollDetails(
+
+
+
+            _poll!.id,
+
+
+
+            titleController.text,
+
+
+
+            descriptionController.text,
+
+
+
+          );
+
+
+
+          setState(() {
+
+
+
+            _poll = updatedPoll;
+
+
+
+            _hasMadeChanges = true;
+
+
+
+          });
+
+
+
+          if (mounted) {
+
+
+
+            ScaffoldMessenger.of(context).showSnackBar(
+
+
+
+              const SnackBar(content: Text('Poll details updated successfully!')),
+
+
+
+            );
+
+
+
+          }
+
+
+
+        } catch (e) {
+
+
+
+          if (mounted) {
+
+
+
+            ScaffoldMessenger.of(context).showSnackBar(
+
+
+
+              SnackBar(content: Text('Failed to update poll details: $e')),
+
+
+
+            );
+
+
+
+          }
+
+
+
+        }
+
+
+
+      }
+
+
+
+    }
 
 
 
@@ -465,13 +803,47 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
-    return Scaffold(
+        return Scaffold(
 
-      appBar: AppBar(
 
-        title: Text('Manage: ${_poll!.title}'),
 
-      ),
+          appBar: AppBar(
+
+
+
+            title: Text('Manage: ${_poll!.title}'),
+
+
+
+            actions: [
+
+
+
+              IconButton(
+
+
+
+                icon: const Icon(Icons.edit),
+
+
+
+                tooltip: 'Edit Poll Details',
+
+
+
+                onPressed: _showEditPollDialog,
+
+
+
+              ),
+
+
+
+            ],
+
+
+
+          ),
 
       body: Padding(
 

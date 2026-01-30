@@ -69,6 +69,7 @@ class Poll {
   final String? description;
   final String access_code;
   final bool is_active;
+  final DateTime created_at; // New field
   final List<Question> questions;
 
   Poll({
@@ -77,6 +78,7 @@ class Poll {
     this.description,
     required this.access_code,
     required this.is_active,
+    required this.created_at, // New field
     required this.questions,
   });
 
@@ -87,6 +89,7 @@ class Poll {
       description: json['description'],
       access_code: json['access_code'],
       is_active: json['is_active'],
+      created_at: DateTime.parse(json['created_at']), // Parse the datetime string
       questions: (json['questions'] as List)
           .map((i) => Question.fromJson(i))
           .toList(),
@@ -100,6 +103,7 @@ class Poll {
       'description': description,
       'access_code': access_code,
       'is_active': is_active,
+      'created_at': created_at.toIso8601String(), // Serialize to ISO 8601 string
       'questions': questions.map((q) => q.toJson()).toList(),
     };
   }
@@ -110,6 +114,7 @@ class Poll {
     String? description,
     String? access_code,
     bool? is_active,
+    DateTime? created_at, // New field in copyWith
     List<Question>? questions,
   }) {
     return Poll(
@@ -118,6 +123,7 @@ class Poll {
       description: description ?? this.description,
       access_code: access_code ?? this.access_code,
       is_active: is_active ?? this.is_active,
+      created_at: created_at ?? this.created_at, // Assign new field
       questions: questions ?? this.questions,
     );
   }

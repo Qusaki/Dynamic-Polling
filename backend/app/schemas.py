@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
+from datetime import datetime # New import
 from .models import QuestionType
 
 class UserCreate(BaseModel):
@@ -26,6 +27,10 @@ class PollCreateResponse(BaseModel):
 class PollStatusUpdate(BaseModel):
     is_active: bool
 
+class PollUpdate(BaseModel):
+    title: str
+    description: Optional[str] = None
+
 class VoteCreate(BaseModel):
     question_id: int
     response_value: str
@@ -51,6 +56,7 @@ class Poll(BaseModel):
     description: Optional[str] = None
     access_code: str
     is_active: bool
+    created_at: datetime # New field
     questions: List[Question] = []
 
     class Config:

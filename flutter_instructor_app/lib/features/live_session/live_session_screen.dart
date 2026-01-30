@@ -111,6 +111,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   @override
   void dispose() {
     _disconnectWebSocket();
+    ref.invalidate(pollsProvider); // Invalidate the polls list on dispose
     super.dispose();
   }
 

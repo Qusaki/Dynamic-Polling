@@ -213,25 +213,69 @@ class ApiService {
       }
     }
   
-    Future<Poll> getPoll(int pollId) async {
-      final token = await _getToken();
-      if (token == null) {
-        throw Exception('Not authenticated');
+      Future<Poll> getPoll(int pollId) async {
+        final token = await _getToken();
+        if (token == null) {
+          throw Exception('Not authenticated');
+        }
+        final response = await http.get(
+          Uri.parse('$_baseUrl/polls/$pollId'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (response.statusCode == 200) {
+          return Poll.fromJson(jsonDecode(response.body));
+        } else if (response.statusCode == 401) {
+          await _storage.delete(key: 'access_token');
+          throw Exception('Token expired or invalid. Please login again.');
+        } else {
+          throw Exception('Failed to fetch poll: Status: ${response.statusCode}, Body: ${response.body}');
+        }
       }
-      final response = await http.get(
-        Uri.parse('$_baseUrl/polls/$pollId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode == 200) {
-        return Poll.fromJson(jsonDecode(response.body));
-      } else if (response.statusCode == 401) {
-        await _storage.delete(key: 'access_token');
-        throw Exception('Token expired or invalid. Please login again.');
-      } else {
-        throw Exception('Failed to fetch poll: Status: ${response.statusCode}, Body: ${response.body}');
+    
+      Future<Poll> updatePollDetails(int pollId, String title, String? description) async {
+        final token = await _getToken();
+        if (token == null) {
+          throw Exception('Not authenticated');
+        }
+    
+        final response = await http.put(
+          Uri.parse('$_baseUrl/polls/$pollId'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'title': title, 'description': description}),
+        );
+    
+        if (response.statusCode == 200) {
+          return Poll.fromJson(jsonDecode(response.body));
+        } else if (response.statusCode == 401) {
+          await _storage.delete(key: 'access_token');
+          throw Exception('Token expired or invalid. Please login again.');
+        } else {
+          throw Exception('Failed to update poll details. Status: ${response.statusCode}, Body: ${response.body}');
+        }
       }
-    }
-  Future<List<Poll>> fetchMyPolls() async {
+    
+      Future<void> deletePoll(int pollId) async {
+        final token = await _getToken();
+        if (token == null) {
+          throw Exception('Not authenticated');
+        }
+    
+        final response = await http.delete(
+          Uri.parse('$_baseUrl/polls/$pollId'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+    
+        if (response.statusCode != 204) {
+          if (response.statusCode == 401) {
+            await _storage.delete(key: 'access_token');
+            throw Exception('Token expired or invalid. Please login again.');
+          }
+          throw Exception('Failed to delete poll. Status: ${response.statusCode}, Body: ${response.body}');
+        }
+      }  Future<List<Poll>> fetchMyPolls() async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('Not authenticated');
