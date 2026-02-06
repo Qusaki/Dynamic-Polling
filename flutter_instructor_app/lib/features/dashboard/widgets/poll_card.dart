@@ -18,7 +18,12 @@ class PollCard extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onToggleStatus,
+    this.onViewResults,
   });
+
+  final Function(bool)? onToggleStatus;
+  final VoidCallback? onViewResults;
 
   @override
   Widget build(BuildContext context) {
@@ -42,19 +47,31 @@ class PollCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Chip(
-              label: Text(status),
-              backgroundColor: isActive ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+            // Status Toggle
+            Switch(
+              value: isActive,
+              onChanged: onToggleStatus,
             ),
+            // Popup Menu
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') {
                   onEdit?.call();
                 } else if (value == 'delete') {
                   onDelete?.call();
+                } else if (value == 'results') {
+                  onViewResults?.call();
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                // Show "View Results" always, or at least for closed polls
+                const PopupMenuItem<String>(
+                  value: 'results',
+                  child: ListTile(
+                    leading: Icon(Icons.bar_chart),
+                    title: Text('View Results'),
+                  ),
+                ),
                 const PopupMenuItem<String>(
                   value: 'edit',
                   child: ListTile(

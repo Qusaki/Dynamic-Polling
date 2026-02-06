@@ -63,9 +63,23 @@ class DashboardScreen extends ConsumerWidget {
           const SnackBar(content: Text('Poll details updated successfully!'))
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update poll details: $e'))
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update poll details: $e'))
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _togglePollStatus(BuildContext context, WidgetRef ref, int pollId, bool isActive) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.updatePollStatus(pollId, isActive);
+      ref.invalidate(pollsProvider); 
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
@@ -109,11 +123,14 @@ class DashboardScreen extends ConsumerWidget {
                 description: poll.description,
                 status: poll.is_active ? 'Active' : 'Closed',
                 date: DateFormat('yyyy-MM-dd HH:mm').format(poll.created_at),
-                                            onTap: () async {
-                                              await context.push('/poll/${poll.id}');
-                                              ref.invalidate(pollsProvider);
-                                            },
-                                            onEdit: () => _showEditPollDialog(context, ref, poll),                onDelete: () async {
+                onTap: () async {
+                  await context.push('/poll/${poll.id}');
+                  ref.invalidate(pollsProvider);
+                },
+                onToggleStatus: (value) => _togglePollStatus(context, ref, poll.id, value),
+                onViewResults: () => context.push('/poll/${poll.id}/results'),
+                onEdit: () => _showEditPollDialog(context, ref, poll),
+                onDelete: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -131,7 +148,7 @@ class DashboardScreen extends ConsumerWidget {
                   );
 
                   if (confirmed == true) {
-                    try {
+                     try {
                       final apiService = ref.read(apiServiceProvider);
                       await apiService.deletePoll(poll.id);
                       await ref.refresh(pollsProvider); // Refresh the list

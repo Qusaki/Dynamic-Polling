@@ -7,6 +7,7 @@ import 'package:flutter_instructor_app/features/dashboard/dashboard_screen.dart'
 import 'package:flutter_instructor_app/features/live_session/live_session_screen.dart';
 import 'package:flutter_instructor_app/features/create_poll/create_multi_question_poll_screen.dart';
 import 'package:flutter_instructor_app/features/poll_management/poll_management_screen.dart';
+import 'package:flutter_instructor_app/features/dashboard/results_screen.dart';
 
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -41,6 +42,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final pollId = state.pathParameters['id']!;
               return PollManagementScreen(pollId: pollId);
+            },
+          ),
+          GoRoute(
+            path: 'results',
+            builder: (context, state) {
+              final pollId = state.pathParameters['id']!;
+              return ResultsScreen(pollId: pollId);
             },
           ),
         ],

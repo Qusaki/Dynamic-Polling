@@ -18,19 +18,20 @@ class _ApiEndpoints {
 }
 
 class ApiService {
-  static final String _baseUrl = kIsWeb
-      ? 'http://127.0.0.1:8000'
-      : Platform.isAndroid
-      ? 'http://10.0.2.2:8000'
-      : 'http://127.0.0.1:8000';
+  // STRICT LOCALHOST MODE
+  static const String _hostIp = '127.0.0.1'; 
+  
+  static final String _baseUrl = 'http://$_hostIp:8000';
+  
+  // Student App URL (for sharing). Needs /#/ for Flutter Web default hashing.
+  static final String studentAppBaseUrl = 'http://localhost:3000/#';
 
   static final String websocketBaseUrl = kIsWeb
       ? 'ws://127.0.0.1:8000'
       : Platform.isAndroid
       ? 'ws://10.0.2.2:8000'
-      : 'http://127.0.0.1:8000';
-  
-  static const String studentAppBaseUrl = 'http://localhost:3000'; // New constant
+      : 'ws://127.0.0.1:8000';
+
 
 
   final _storage = const FlutterSecureStorage();
@@ -228,6 +229,15 @@ class ApiService {
       return Question.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to add question. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> getPollResults(int pollId) async {
+    final response = await _makeAuthenticatedRequest('GET', '/polls/$pollId/results');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch results. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 }

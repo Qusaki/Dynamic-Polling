@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/poll_models.dart';
 
 class ApiService {
-  // Use localhost for web dev; ensure this matches your backend URL
+  // STRICT LOCALHOST MODE
   static const String baseUrl = 'http://127.0.0.1:8000';
 
   Future<PollPublic> getPollByAccessCode(String accessCode) async {

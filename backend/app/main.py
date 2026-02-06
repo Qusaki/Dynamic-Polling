@@ -340,6 +340,36 @@ async def _get_tally_for_question(question: models.Question, db: AsyncSession) -
         }
     return {}
 
+@app.get("/polls/{poll_id}/results")
+async def get_poll_results(
+    poll_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: models.User = Depends(auth.get_current_user_and_refresh_token)
+):
+    # Verify poll belongs to user
+    result = await db.execute(select(models.Poll).where(models.Poll.id == poll_id, models.Poll.instructor_id == current_user.id))
+    poll = result.scalars().first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found")
+        
+    # Fetch poll with questions/options eagerly
+    poll_result = await db.execute(
+        select(models.Poll)
+        .where(models.Poll.id == poll_id)
+        .options(selectinload(models.Poll.questions).selectinload(models.Question.options))
+    )
+    poll_full = poll_result.scalars().first()
+    
+    results = []
+    for question in poll_full.questions:
+        tally = await _get_tally_for_question(question, db)
+        results.append(tally)
+        
+    return {
+        "poll_id": poll_full.id,
+        "results": results
+    }
+
 @app.get("/polls/access/{access_code}", response_model=schemas.PollPublic)
 async def get_poll_by_access_code(access_code: str, db: AsyncSession = Depends(get_session)):
     result = await db.execute(

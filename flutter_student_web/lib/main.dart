@@ -21,6 +21,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const JoinScreen(),
       ),
       GoRoute(
+        path: '/join/:accessCode',
+        builder: (context, state) {
+          final accessCode = state.pathParameters['accessCode'];
+          return JoinScreen(initialCode: accessCode);
+        },
+      ),
+      GoRoute(
         path: '/vote/:accessCode',
         builder: (context, state) {
           final accessCode = state.pathParameters['accessCode']!;

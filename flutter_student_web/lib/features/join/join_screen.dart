@@ -1,31 +1,48 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
-  const JoinScreen({super.key});
+  final String? initialCode;
+  
+  const JoinScreen({super.key, this.initialCode});
 
   @override
   ConsumerState<JoinScreen> createState() => _JoinScreenState();
 }
 
 class _JoinScreenState extends ConsumerState<JoinScreen> {
-  final _codeController = TextEditingController();
+  late final TextEditingController _codeController;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   String? _errorMessage;
 
+  @override
+  void initState() {
+    super.initState();
+    _codeController = TextEditingController(text: widget.initialCode);
+    if (widget.initialCode != null && widget.initialCode!.isNotEmpty) {
+      // Auto-join if code is provided
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _joinPoll();
+      });
+    }
+  }
+
   Future<void> _joinPoll() async {
-    if (!_formKey.currentState!.validate()) return;
+    // We only validate if the form is actually visible/built, or just check the value directly for auto-join
+    final code = _codeController.text.trim().toUpperCase();
+    if (code.length < 4) {
+       setState(() => _errorMessage = 'Code is too short');
+       return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    final code = _codeController.text.trim().toUpperCase();
     final apiService = ref.read(apiServiceProvider);
 
     try {
@@ -36,9 +53,11 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
         context.go('/vote/$code');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
