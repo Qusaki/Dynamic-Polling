@@ -36,9 +36,11 @@ class PollUpdate(BaseModel):
 class VoteCreate(BaseModel):
     question_id: int
     response_value: str
+    voter_id: Optional[str] = None
 
 class BatchVote(BaseModel):
     votes: List[VoteCreate]
+    voter_id: Optional[str] = None
 
 class Option(BaseModel):
     id: int

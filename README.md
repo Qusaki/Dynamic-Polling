@@ -12,6 +12,7 @@ A real-time classroom feedback system designed to facilitate interactive polling
   - [Backend](#backend)
   - [Instructor App](#instructor-app)
   - [Student Client](#student-client)
+- [Service Ports](#service-ports)
 - [Authentication](#authentication)
 - [Real-Time Communication](#real-time-communication)
 - [Database](#database)
@@ -90,6 +91,12 @@ To get the Dynamic Polling System up and running, follow these steps:
     ```
     The instructor app will connect to the backend running at `http://10.0.2.2:8000` (for Android emulator) or `http://localhost:8000` (for iOS simulator/desktop).
 
+4.  **Run in Browser:**
+    ```bash
+    flutter run -d chrome --web-port=4000
+    ```
+    The instructor app will be available at `http://localhost:4000`.
+
 ### Student Client
 
 1.  **Prerequisites:** Ensure you have the Flutter SDK installed and web support enabled (`flutter config --enable-web`).
@@ -103,6 +110,14 @@ To get the Dynamic Polling System up and running, follow these steps:
     flutter run -d chrome --web-port=3000
     ```
     The student client will be available in your browser at `http://localhost:3000`.
+
+## Service Ports
+
+| Service | Port | URL |
+|---------|------|-----|
+| Backend API | 8000 | http://localhost:8000 |
+| Student Client | 3000 | http://localhost:3000 |
+| Instructor App | 4000 | http://localhost:4000 |
 
 ## Authentication
 

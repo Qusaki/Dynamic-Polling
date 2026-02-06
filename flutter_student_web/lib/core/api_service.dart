@@ -3,9 +3,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/poll_models.dart';
 
+import 'dart:math';
+
 class ApiService {
   // STRICT LOCALHOST MODE
   static const String baseUrl = 'http://127.0.0.1:8000';
+
+  // Simple in-memory ID for the session.
+  String? _voterId;
+
+  String get voterId {
+    if (_voterId == null) {
+      final random = Random();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final rand = random.nextInt(1000000);
+      _voterId = 'student_${timestamp}_$rand';
+    }
+    return _voterId!;
+  }
 
   Future<PollPublic> getPollByAccessCode(String accessCode) async {
     final response = await http.get(Uri.parse('$baseUrl/polls/access/$accessCode'));
@@ -28,6 +43,7 @@ class ApiService {
       body: jsonEncode({
         'question_id': questionId,
         'response_value': value,
+        'voter_id': voterId,
       }),
     );
 
@@ -42,6 +58,7 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'votes': votes,
+        'voter_id': voterId,
       }),
     );
 

@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, distinct
 from . import models, auth, schemas
 from .database import get_session
 from .websocket_manager import ConnectionManager
@@ -340,6 +340,16 @@ async def _get_tally_for_question(question: models.Question, db: AsyncSession) -
         }
     return {}
 
+async def _get_participant_count(poll_id: int, db: AsyncSession) -> int:
+    """Helper function to count unique participants in a poll."""
+    result = await db.execute(
+        select(func.count(distinct(models.Vote.voter_id)))
+        .join(models.Question, models.Vote.question_id == models.Question.id)
+        .where(models.Question.poll_id == poll_id)
+        .where(models.Vote.voter_id.isnot(None))
+    )
+    return result.scalar_one_or_none() or 0
+
 @app.get("/polls/{poll_id}/results")
 async def get_poll_results(
     poll_id: int,
@@ -400,7 +410,8 @@ async def submit_vote(access_code: str, vote: schemas.VoteCreate, db: AsyncSessi
 
     new_vote = models.Vote(
         question_id=vote.question_id,
-        response_value=vote.response_value
+        response_value=vote.response_value,
+        voter_id=vote.voter_id
     )
     db.add(new_vote)
     await db.commit()
@@ -414,6 +425,13 @@ async def submit_vote(access_code: str, vote: schemas.VoteCreate, db: AsyncSessi
             "type": "tally_update",
             "data": tally_data
         }))
+
+    # Broadcast participant count update
+    participant_count = await _get_participant_count(poll.id, db)
+    await manager.broadcast(str(poll.id), json.dumps({
+        "type": "participant_update",
+        "data": {"count": participant_count}
+    }))
 
     return {"message": "Vote submitted successfully"}
 
@@ -436,7 +454,8 @@ async def submit_batch_votes(access_code: str, batch_vote: schemas.BatchVote, db
 
         new_vote = models.Vote(
             question_id=vote.question_id,
-            response_value=vote.response_value
+            response_value=vote.response_value,
+            voter_id=batch_vote.voter_id
         )
         db.add(new_vote)
         
@@ -460,6 +479,13 @@ async def submit_batch_votes(access_code: str, batch_vote: schemas.BatchVote, db
                     "type": "tally_update",
                     "data": tally_data
                 }))
+
+    # Broadcast participant count update
+    participant_count = await _get_participant_count(poll.id, db)
+    await manager.broadcast(str(poll.id), json.dumps({
+        "type": "participant_update",
+        "data": {"count": participant_count}
+    }))
 
     return {"message": "Batch votes submitted successfully"}
 
@@ -494,7 +520,32 @@ def _build_initial_state_message(poll: models.Poll, initial_tally: List[dict]) -
     }
     message = {
         "type": "initial_state",
-        "data": {"poll": poll_dict, "tallies": initial_tally}
+        "data": {"poll": poll_dict, "tallies": initial_tally, "participant_count": 0} # Default 0, overridden by passed arg if needed? Better to pass it.
+    }
+    return json.dumps(message)
+
+def _build_initial_state_message_with_count(poll: models.Poll, initial_tally: List[dict], participant_count: int) -> str:
+    poll_dict = {
+        "id": poll.id,
+        "title": poll.title,
+        "description": poll.description,
+        "access_code": poll.access_code,
+        "is_active": poll.is_active,
+        "created_at": poll.created_at.isoformat(),
+        "questions": [
+            {
+                "id": q.id, "text": q.text, "type": q.type.name, "order": q.order,
+                "options": [{"id": o.id, "text": o.text} for o in q.options]
+            } for q in poll.questions
+        ]
+    }
+    message = {
+        "type": "initial_state",
+        "data": {
+            "poll": poll_dict, 
+            "tallies": initial_tally,
+            "participant_count": participant_count
+        }
     }
     return json.dumps(message)
 
@@ -512,8 +563,9 @@ async def websocket_endpoint(websocket: WebSocket, poll_id: str, db: AsyncSessio
         poll = await _get_poll_for_websocket(poll_id, db)
         
         initial_tally = [await _get_tally_for_question(q, db) for q in poll.questions]
+        participant_count = await _get_participant_count(poll.id, db)
         
-        initial_message = _build_initial_state_message(poll, initial_tally)
+        initial_message = _build_initial_state_message_with_count(poll, initial_tally, participant_count)
         await websocket.send_text(initial_message)
         
         await _handle_websocket_loop(websocket)

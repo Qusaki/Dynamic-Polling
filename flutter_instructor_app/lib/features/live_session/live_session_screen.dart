@@ -31,6 +31,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   Map<int, Map<String, dynamic>> _tallies = {};
   WebSocketChannel? _channel;
   int _totalVotes = 0;
+  int _participantCount = 0; // Track unique participants
   bool _isManuallyDisconnecting = false;
 
   @override
@@ -79,9 +80,12 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           for (var t in data['tallies'])
             t['question_id'] as int: t as Map<String, dynamic>
         };
+        _participantCount = data['participant_count'] ?? 0;
       } else if (type == 'tally_update') {
         final questionId = data['question_id'] as int;
         _tallies[questionId] = data as Map<String, dynamic>;
+      } else if (type == 'participant_update') {
+         _participantCount = data['count'] as int;
       }
       _updateTotalVotes();
     });
@@ -209,7 +213,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           padding: const EdgeInsets.only(right: 16.0),
           child: Chip(
             avatar: const Icon(Icons.people),
-            label: Text('$_totalVotes Votes'),
+            label: Text('$_participantCount Participants'),
           ),
         ),
       ],

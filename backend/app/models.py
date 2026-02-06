@@ -66,5 +66,6 @@ class Vote(Base):
     id = Column(Integer, primary_key=True, index=True)
     question_id = Column(Integer, ForeignKey("questions.id"))
     response_value = Column(String, nullable=False)
+    voter_id = Column(String, nullable=True) # UUID for unique participant tracking
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     question = relationship("Question", back_populates="votes")

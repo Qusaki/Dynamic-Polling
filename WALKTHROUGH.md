@@ -11,6 +11,12 @@ The "Run All" task has been initiated. The following services are starting up:
 | **Student Client** | [http://localhost:3000](http://localhost:3000) | Launching (Chrome) |
 | **Instructor App** | [http://localhost:4000](http://localhost:4000) | Launching (Chrome) |
 
+## New Features
+
+- **Anonymous Voting**: Students can vote without logging in.
+- **Unique Participant Counting**: The instructor dashboard counts unique students in a session (based on browser session), not just total votes.
+- **Real-time Updates**: Instructor sees vote counts update instantly via WebSockets.
+
 ## Verification
 
 1.  **Backend**: Visit [http://localhost:8000/docs](http://localhost:8000/docs) to see the Swagger UI.
