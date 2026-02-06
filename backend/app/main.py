@@ -340,6 +340,20 @@ async def _get_tally_for_question(question: models.Question, db: AsyncSession) -
         }
     return {}
 
+@app.get("/polls/access/{access_code}", response_model=schemas.PollPublic)
+async def get_poll_by_access_code(access_code: str, db: AsyncSession = Depends(get_session)):
+    result = await db.execute(
+        select(models.Poll)
+        .where(models.Poll.access_code == access_code)
+        .options(selectinload(models.Poll.questions).selectinload(models.Question.options))
+    )
+    poll = result.scalars().first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found")
+    if not poll.is_active:
+         raise HTTPException(status_code=400, detail="Poll is not active")
+    return poll
+
 @app.post("/polls/{access_code}/vote")
 async def submit_vote(access_code: str, vote: schemas.VoteCreate, db: AsyncSession = Depends(get_session)):
     result = await db.execute(select(models.Poll).where(models.Poll.access_code == access_code))
@@ -372,6 +386,52 @@ async def submit_vote(access_code: str, vote: schemas.VoteCreate, db: AsyncSessi
         }))
 
     return {"message": "Vote submitted successfully"}
+
+@app.post("/polls/{access_code}/vote/batch")
+async def submit_batch_votes(access_code: str, batch_vote: schemas.BatchVote, db: AsyncSession = Depends(get_session)):
+    result = await db.execute(select(models.Poll).where(models.Poll.access_code == access_code))
+    poll = result.scalars().first()
+    if not poll or not poll.is_active:
+        raise HTTPException(status_code=404, detail="Poll not found or is not active")
+
+    updated_tallies = []
+    
+    for vote in batch_vote.votes:
+        question_result = await db.execute(
+            select(models.Question).where(models.Question.id == vote.question_id)
+        )
+        question = question_result.scalars().first()
+        if not question or question.poll_id != poll.id:
+            continue # Skip invalid questions or throw error? Skipping for robustness.
+
+        new_vote = models.Vote(
+            question_id=vote.question_id,
+            response_value=vote.response_value
+        )
+        db.add(new_vote)
+        
+        # Collect questions to update tally later (or update per vote? Update per vote is simpler for logic reuse)
+        # To avoid N+1 tally calculations, ideally we'd do it once, but for now reuse helper.
+        # However, flushing inside loop is better for `await` logic if we want to be safe.
+        
+    await db.commit()
+
+    # Calculate tallies for all affected questions and broadcast
+    # Optimization: Unique questions only
+    affected_question_ids = {v.question_id for v in batch_vote.votes}
+    
+    for q_id in affected_question_ids:
+        q_res = await db.execute(select(models.Question).where(models.Question.id == q_id))
+        question = q_res.scalars().first()
+        if question:
+            tally_data = await _get_tally_for_question(question, db)
+            if tally_data:
+                await manager.broadcast(str(poll.id), json.dumps({
+                    "type": "tally_update",
+                    "data": tally_data
+                }))
+
+    return {"message": "Batch votes submitted successfully"}
 
 
 async def _get_poll_for_websocket(poll_id: str, db: AsyncSession) -> models.Poll:
