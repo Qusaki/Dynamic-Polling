@@ -14,19 +14,3 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
 
-  - type: cron
-    name: dynamic-polling-keep-alive
-    runtime: python
-    region: singapore
-    plan: free
-    schedule: "*/10 * * * *"
-    buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: cd backend && python -m app.cron_self_ping
-    envVars:
-      - key: APP_URL
-        fromService:
-          type: web
-          name: dynamic-polling-backend
-          property: url
-
-

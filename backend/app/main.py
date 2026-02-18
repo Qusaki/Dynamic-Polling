@@ -14,8 +14,38 @@ import string
 import json
 from fastapi.security import OAuth2PasswordRequestForm # Re-added import
 from sqlalchemy.orm import selectinload
+import httpx
+import asyncio
+import os
+import logging
+
 
 app = FastAPI()
+
+async def keep_alive():
+    """Background task to ping the application every 10 minutes to keep it active."""
+    while True:
+        await asyncio.sleep(600)  # 10 minutes
+        url = os.getenv("RENDER_EXTERNAL_URL")  # Render provides this automatically
+        if url:
+            if not url.startswith("http"):
+                url = f"https://{url}"
+            
+            target = f"{url}/docs"
+            logging.info(f"Pinging {target} to keep alive...")
+            async with httpx.AsyncClient() as client:
+                try:
+                    response = await client.get(target, timeout=10.0)
+                    logging.info(f"Keep-alive ping status: {response.status_code}")
+                except Exception as e:
+                    logging.error(f"Keep-alive ping failed: {e}")
+        else:
+            logging.warning("RENDER_EXTERNAL_URL not set, skipping keep-alive ping.")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(keep_alive())
+
 
 origins = ["*"]
 
