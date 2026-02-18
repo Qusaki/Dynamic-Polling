@@ -298,15 +298,11 @@ class _VoteScreenState extends ConsumerState<VoteScreen> {
         );
 
       case 'OPEN_ENDED':
-        return TextField(
-          decoration: const InputDecoration(
-            hintText: 'Type your answer here...',
-            border: OutlineInputBorder(),
-          ),
-          minLines: 2,
-          maxLines: 4,
+          return _OpenEndedInput(
+          questionId: question.id,
+          wordLimit: question.wordLimit,
           onChanged: (val) {
-            setState(() {
+             setState(() {
               _answers[question.id] = val;
             });
           },
@@ -315,5 +311,108 @@ class _VoteScreenState extends ConsumerState<VoteScreen> {
       default:
         return const Text('Unknown question type');
     }
+  }
+}
+
+class _OpenEndedInput extends StatefulWidget {
+  final int questionId;
+  final int? wordLimit;
+  final ValueChanged<String> onChanged;
+
+  const _OpenEndedInput({
+    required this.questionId,
+    this.wordLimit,
+    required this.onChanged,
+  });
+
+  @override
+  State<_OpenEndedInput> createState() => _OpenEndedInputState();
+}
+
+class _OpenEndedInputState extends State<_OpenEndedInput> {
+  final _controller = TextEditingController();
+  int _currentWordCount = 0;
+  String _lastValidValue = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleControllerChange);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleControllerChange);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleControllerChange() {
+    final text = _controller.text;
+    
+    // Calculate word count
+    final words = text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final count = text.isEmpty ? 0 : words.length;
+
+    if (widget.wordLimit == null) {
+      _updateWordCount(count);
+      widget.onChanged(text);
+      return;
+    }
+
+    if (count > widget.wordLimit!) {
+      // Revert to last valid value immediately
+      // This is the "Blocking" behavior
+      _controller.value = TextEditingValue(
+        text: _lastValidValue,
+        selection: TextSelection.collapsed(offset: _lastValidValue.length),
+      );
+      
+      // Optional: Show visual feedback or simple shake could go here, 
+      // but strict blocking is sufficient as requested.
+    } else {
+      _lastValidValue = text;
+      _updateWordCount(count);
+      widget.onChanged(text);
+    }
+  }
+
+  void _updateWordCount(int count) {
+    if (_currentWordCount != count) {
+      setState(() {
+        _currentWordCount = count;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _controller,
+          decoration: const InputDecoration(
+            hintText: 'Type your answer here...',
+            border: OutlineInputBorder(),
+          ),
+          minLines: 2,
+          maxLines: 4,
+        ),
+        if (widget.wordLimit != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              '$_currentWordCount / ${widget.wordLimit} words',
+              style: TextStyle(
+                // Change color if near limit to warn user? 
+                // For now, just grey unless full.
+                color: _currentWordCount >= widget.wordLimit! ? Colors.orange : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

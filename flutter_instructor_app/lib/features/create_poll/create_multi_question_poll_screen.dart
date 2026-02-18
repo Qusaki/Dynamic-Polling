@@ -178,6 +178,7 @@ class _CreateMultiQuestionPollScreenState extends ConsumerState<CreateMultiQuest
                   order: isEditing ? questionToEdit.order : ref.read(pollBuilderProvider).length,
                   type: app_models.QuestionType.open_ended,
                   text: data.questionText,
+                  wordLimit: data.wordLimit, // Save the word limit
                   options: [],
                 );
                 if (isEditing) {

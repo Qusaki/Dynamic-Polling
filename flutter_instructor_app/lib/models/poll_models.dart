@@ -28,12 +28,15 @@ class Question {
   final int order;
   final List<Option> options;
 
+  final int? wordLimit;
+
   Question({
     required this.id,
     required this.text,
     required this.type,
     required this.order,
     this.options = const [],
+    this.wordLimit,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -49,6 +52,7 @@ class Question {
       options: json['options'] != null
           ? (json['options'] as List).map((i) => Option.fromJson(i)).toList()
           : [],
+      wordLimit: json['word_limit'],
     );
   }
 
@@ -57,6 +61,7 @@ class Question {
       'text': text,
       'type': describeEnum(type).toUpperCase(),
       'options': options.map((o) => o.text).toList(),
+      'word_limit': wordLimit,
     };
   }
 }

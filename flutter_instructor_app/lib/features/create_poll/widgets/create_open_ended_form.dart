@@ -24,7 +24,7 @@ class _CreateOpenEndedFormState extends State<CreateOpenEndedForm> {
   void initState() {
     super.initState();
     _questionController = TextEditingController(text: widget.initialQuestion?.text ?? '');
-    // Word limit is not stored in the backend model, so we don't pre-fill it.
+    _wordLimitController.text = widget.initialQuestion?.wordLimit?.toString() ?? '';
   }
 
   @override
@@ -51,6 +51,14 @@ class _CreateOpenEndedFormState extends State<CreateOpenEndedForm> {
             controller: _wordLimitController,
             decoration: const InputDecoration(labelText: 'Word Count Limit (Optional)', border: OutlineInputBorder()),
             keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value != null && value.isNotEmpty) {
+                if (int.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 16), // Add some space
           SizedBox(

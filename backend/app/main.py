@@ -234,6 +234,7 @@ async def update_question(
 
     question.text = question_data.text
     question.type = question_data.type
+    question.word_limit = question_data.word_limit
     
     await _update_question_options(question, question_data.options, db)
 
@@ -298,7 +299,8 @@ async def add_question_to_poll(
         poll_id=poll_id,
         text=question_data.text,
         type=question_data.type,
-        order=new_order
+        order=new_order,
+        word_limit=question_data.word_limit
     )
     db.add(new_question)
     await db.flush()
@@ -408,6 +410,11 @@ async def submit_vote(access_code: str, vote: schemas.VoteCreate, db: AsyncSessi
     if not question or question.poll_id != poll.id:
         raise HTTPException(status_code=404, detail="Question not found in this poll")
 
+    if question.type == models.QuestionType.OPEN_ENDED and question.word_limit:
+        words = [w for w in vote.response_value.strip().split() if w]
+        if len(words) > question.word_limit:
+             raise HTTPException(status_code=400, detail=f"Word limit exceeded. Maximum {question.word_limit} words allowed.")
+
     new_vote = models.Vote(
         question_id=vote.question_id,
         response_value=vote.response_value,
@@ -451,6 +458,15 @@ async def submit_batch_votes(access_code: str, batch_vote: schemas.BatchVote, db
         question = question_result.scalars().first()
         if not question or question.poll_id != poll.id:
             continue # Skip invalid questions or throw error? Skipping for robustness.
+
+        if question.type == models.QuestionType.OPEN_ENDED and question.word_limit:
+             words = [w for w in vote.response_value.strip().split() if w]
+             if len(words) > question.word_limit:
+                 continue # Skip votes that exceed limit in batch? Or fail entire batch? 
+                 # Given robustness pattern, skipping is better than partial failure or full failure for one bad apple in batch context.
+                 # Alternatively, could raise error if strictness is preferred. 
+                 # User asked for "blocking", implying strictness.
+                 # Let's fail the specific vote (skip it) effectively blocking it from being recorded.
 
         new_vote = models.Vote(
             question_id=vote.question_id,

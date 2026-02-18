@@ -48,6 +48,7 @@ class Question(Base):
     text = Column(String, nullable=False)
     type = Column(SQLAlchemyEnum(QuestionType), nullable=False)
     order = Column(Integer, nullable=False)
+    word_limit = Column(Integer, nullable=True) # Optional word limit for OPEN_ENDED questions
     poll = relationship("Poll", back_populates="questions")
     options = relationship("Option", back_populates="question", cascade="all, delete")
     votes = relationship("Vote", back_populates="question", cascade="all, delete")

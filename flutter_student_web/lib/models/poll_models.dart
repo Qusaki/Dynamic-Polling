@@ -33,6 +33,7 @@ class Question {
   final String type; // 'RATING', 'MULTIPLE_CHOICE', 'OPEN_ENDED'
   final int order;
   final List<Option> options;
+  final int? wordLimit;
 
   Question({
     required this.id,
@@ -40,6 +41,7 @@ class Question {
     required this.type,
     required this.order,
     required this.options,
+    this.wordLimit,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -51,6 +53,7 @@ class Question {
       options: (json['options'] as List)
           .map((o) => Option.fromJson(o))
           .toList(),
+      wordLimit: json['word_limit'],
     );
   }
 }

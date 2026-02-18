@@ -14,6 +14,7 @@ class QuestionCreate(BaseModel):
     text: str
     type: QuestionType
     options: Optional[List[str]] = None
+    word_limit: Optional[int] = None
 
 
 
@@ -54,6 +55,7 @@ class Question(BaseModel):
     text: str
     type: QuestionType
     order: int
+    word_limit: Optional[int] = None
     options: List[Option] = []
 
     class Config:
