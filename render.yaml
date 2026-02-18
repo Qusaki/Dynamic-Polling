@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: dynamic-polling-backend
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: cd backend && pip install -r requirements.txt && chmod +x build.sh && ./build.sh
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.9.0
+
+  - type: cron
+    name: dynamic-polling-keep-alive
+    runtime: python
+    region: singapore
+    plan: free
+    schedule: "*/10 * * * *"
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && python -m app.cron_self_ping
+    envVars:
+      - key: APP_URL
+        fromService:
+          type: web
+          name: dynamic-polling-backend
+          property: url
+
+
