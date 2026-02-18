@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.pytest_cache/
+nosetests.xml
+coverage.xml
+.benchmarks
+.mypy_cache/
+.dmypy.json
+.vscode/
+
+# Environment variables
+.env
