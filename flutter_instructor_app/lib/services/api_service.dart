@@ -24,7 +24,7 @@ class ApiService {
   static final String _baseUrl = 'https://dynamic-polling-backend.onrender.com';
   
   // Student App URL (for sharing). Needs /#/ for Flutter Web default hashing.
-  static final String studentAppBaseUrl = 'http://localhost:3000/#';
+  static final String studentAppBaseUrl = 'https://dynamic-polling-student-web.onrender.com/#';
 
   static final String websocketBaseUrl = 'wss://dynamic-polling-backend.onrender.com';
 
