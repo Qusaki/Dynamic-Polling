@@ -48,11 +48,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
         }
       } else {
+        print('Starting login request...');
         isLoggedIn = await apiService.login(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
+        print('Login request completed. Result: $isLoggedIn');
       }
+    } catch (e) {
+      print('Login error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

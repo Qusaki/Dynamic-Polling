@@ -58,6 +58,10 @@ class ApiService {
       defaultHeaders.addAll(headers);
     }
 
+    print('Making ${method.toUpperCase()} request to: $url');
+    print('Headers: $defaultHeaders');
+    if (body != null) print('Body: $body');
+
     http.Response response;
 
     switch (method.toUpperCase()) {
@@ -79,6 +83,9 @@ class ApiService {
       default:
         throw Exception('Unsupported HTTP method: $method');
     }
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     // Handle token refresh
     final refreshedToken = response.headers['x-refreshed-token'];
@@ -105,11 +112,16 @@ class ApiService {
   }
 
   Future<bool> login(String email, String password) async {
+    final url = Uri.parse('$_baseUrl${_ApiEndpoints.token}');
+    print('Making POST request to: $url');
     final response = await http.post(
-      Uri.parse('$_baseUrl${_ApiEndpoints.token}'),
+      url,
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: {'username': email, 'password': password},
     );
+
+    print('Login Response status: ${response.statusCode}');
+    print('Login Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
