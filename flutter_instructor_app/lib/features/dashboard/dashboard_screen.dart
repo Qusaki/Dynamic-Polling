@@ -110,6 +110,7 @@ class DashboardScreen extends ConsumerWidget {
       body: SafeArea(
         child: pollsAsyncValue.when(
           data: (polls) {
+            print('Dashboard: Loaded ${polls.length} polls');
             // Sort polls by created_at in descending order (newest first)
             final sortedPolls = List<Poll>.from(polls)
               ..sort((a, b) => b.created_at.compareTo(a.created_at));
@@ -171,8 +172,12 @@ class DashboardScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () {
+          print('Dashboard: Loading polls...');
+          return const Center(child: CircularProgressIndicator());
+        },
         error: (err, stack) {
+          print('Dashboard: Error loading polls: $err');
           if (err.toString().contains('Token expired or invalid')) {
             Future.microtask(() async {
               ScaffoldMessenger.of(context).showSnackBar(
