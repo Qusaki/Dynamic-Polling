@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../models/poll_models.dart';
 import '../../core/api_service.dart'; // Import ApiService if strictly needed, mostly used via provider
+import 'package:shared_preferences/shared_preferences.dart'; // Added for local storage
 // import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // Removed to avoid dependency issue
 
 // Simple custom rating widget to avoid extra dependency for now
@@ -46,6 +47,44 @@ class _VoteScreenState extends ConsumerState<VoteScreen> {
   // Track submission status per question
   final Map<int, bool> _submitted = {}; 
   bool _isSubmitting = false;
+  bool _hasSubmittedPoll = false; // New flag
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadySubmitted();
+  }
+
+  Future<void> _checkIfAlreadySubmitted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSubmitted = prefs.getBool('submitted_${widget.accessCode}') ?? false;
+    
+    if (hasSubmitted && mounted) {
+      setState(() {
+        _hasSubmittedPoll = true;
+      });
+      _showAlreadySubmittedDialog();
+    }
+  }
+
+  void _showAlreadySubmittedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Already Submitted'),
+        content: const Text('You have already submitted your response for this poll.'),
+        actions: [
+          // Optional: Check results? Or just Close? 
+          // If close, maybe navigate away or just stay blocked? 
+          // User said "popup messgae"
+          // Let's just have a disabled "OK" that stays or navigates home?
+          // For now, allow viewing but disable interactions?
+          // Or just block.
+        ],
+      ),
+    );
+  }
 
   void _submitAnswer(int questionId) async {
     final answer = _answers[questionId];
@@ -97,14 +136,14 @@ class _VoteScreenState extends ConsumerState<VoteScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      bottomNavigationBar: _submitted.isNotEmpty && _submitted.values.first == true // Hide if already submitted (simple logic)
+      bottomNavigationBar: (_submitted.isNotEmpty && _submitted.values.first == true) || _hasSubmittedPoll // Hide if already submitted (simple logic)
           ? null 
           : Padding(
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
               height: 50,
               child: FilledButton(
-                onPressed: _isSubmitting ? null : _submitAll,
+                onPressed: _isSubmitting || _hasSubmittedPoll ? null : _submitAll,
                 child: _isSubmitting 
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text('Submit Poll', style: TextStyle(fontSize: 18)),
@@ -145,6 +184,11 @@ class _VoteScreenState extends ConsumerState<VoteScreen> {
           _submitted[v['question_id'] as int] = true;
         }
       });
+
+      // Save to local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('submitted_${widget.accessCode}', true);
+
       
       if (mounted) {
         showDialog(
