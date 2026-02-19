@@ -87,33 +87,35 @@ class _CreateMultiQuestionPollScreenState extends ConsumerState<CreateMultiQuest
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
-        return Wrap(
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.list_alt_rounded),
-              title: const Text('Add Multiple Choice'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showQuestionFormDialog(type: app_models.QuestionType.multiple_choice);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.star_border_rounded),
-              title: const Text('Add Rating (1-5)'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showQuestionFormDialog(type: app_models.QuestionType.rating);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.short_text_rounded),
-              title: const Text('Add Open-Ended'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showQuestionFormDialog(type: app_models.QuestionType.open_ended);
-              },
-            ),
-          ],
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.list_alt_rounded),
+                title: const Text('Add Multiple Choice'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showQuestionFormDialog(type: app_models.QuestionType.multiple_choice);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.star_border_rounded),
+                title: const Text('Add Rating (1-5)'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showQuestionFormDialog(type: app_models.QuestionType.rating);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.short_text_rounded),
+                title: const Text('Add Open-Ended'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showQuestionFormDialog(type: app_models.QuestionType.open_ended);
+                },
+              ),
+            ],
+          ),
         );
       },
     );
