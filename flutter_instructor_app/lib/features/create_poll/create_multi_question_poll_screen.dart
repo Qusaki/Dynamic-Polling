@@ -239,7 +239,7 @@ class _CreateMultiQuestionPollScreenState extends ConsumerState<CreateMultiQuest
         questions,
       );
 
-      ref.invalidate(pollsProvider);
+      ref.read(pollsProvider.notifier).refresh();
 
       if (mounted) {
         final pollId = response['poll_id'].toString();

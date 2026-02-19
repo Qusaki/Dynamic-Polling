@@ -65,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (mounted) {
       if (isLoggedIn == true) {
-        ref.invalidate(pollsProvider);
+        ref.read(pollsProvider.notifier).refresh();
         context.go('/dashboard');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

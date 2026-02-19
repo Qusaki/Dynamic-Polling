@@ -58,7 +58,7 @@ class DashboardScreen extends ConsumerWidget {
           titleController.text,
           descriptionController.text,
         );
-        await ref.refresh(pollsProvider); // More direct way to refetch
+        await ref.read(pollsProvider.notifier).refresh(); // More direct way to refetch
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Poll details updated successfully!'))
         );
@@ -76,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
     try {
       final apiService = ref.read(apiServiceProvider);
       await apiService.updatePollStatus(pollId, isActive);
-      ref.invalidate(pollsProvider); 
+      await ref.read(pollsProvider.notifier).refresh(); 
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
@@ -99,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () async {
               final apiService = ref.read(apiServiceProvider);
               await apiService.logout();
-              ref.invalidate(pollsProvider);
+              // ref.invalidate(pollsProvider); // Not needed as we redirect
               if (context.mounted) {
                 context.go('/login');
               }
@@ -127,7 +127,7 @@ class DashboardScreen extends ConsumerWidget {
                 date: DateFormat('yyyy-MM-dd HH:mm').format(poll.created_at),
                 onTap: () async {
                   await context.push('/poll/${poll.id}');
-                  ref.invalidate(pollsProvider);
+                  ref.read(pollsProvider.notifier).refresh();
                 },
                 onToggleStatus: (value) => _togglePollStatus(context, ref, poll.id, value),
                 onViewResults: () => context.push('/poll/${poll.id}/results'),
@@ -153,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
                      try {
                       final apiService = ref.read(apiServiceProvider);
                       await apiService.deletePoll(poll.id);
-                      await ref.refresh(pollsProvider); // Refresh the list
+                      await ref.read(pollsProvider.notifier).refresh(); // Refresh the list
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Poll deleted successfully.')),
@@ -172,10 +172,7 @@ class DashboardScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () {
-          print('Dashboard: Loading polls...');
-          return const Center(child: CircularProgressIndicator());
-        },
+        loading: () => const ServerLoadingIndicator(),
         error: (err, stack) {
           print('Dashboard: Error loading polls: $err');
           if (err.toString().contains('Token expired or invalid')) {
@@ -185,7 +182,7 @@ class DashboardScreen extends ConsumerWidget {
               );
               final apiService = ref.read(apiServiceProvider);
               await apiService.logout();
-              ref.invalidate(pollsProvider);
+              ref.read(pollsProvider.notifier).refresh();
               if (context.mounted) {
                 context.go('/login');
               }
@@ -200,6 +197,67 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => context.push('/create-poll'),
         label: const Text('Create Poll'),
         icon: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class ServerLoadingIndicator extends StatefulWidget {
+  const ServerLoadingIndicator({super.key});
+
+  @override
+  State<ServerLoadingIndicator> createState() => _ServerLoadingIndicatorState();
+}
+
+class _ServerLoadingIndicatorState extends State<ServerLoadingIndicator> {
+  bool _showLongWaitMessage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Show long wait message after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _showLongWaitMessage = true);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 24),
+          const Text('Loading polls...'),
+          if (_showLongWaitMessage) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+              ),
+              child: const Column(
+                children: [
+                  Text(
+                    'Waiting for server...',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'The free server may take up to 50s to wake up.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

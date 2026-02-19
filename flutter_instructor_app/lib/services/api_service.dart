@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:universal_io/io.dart';
 import '../models/poll_models.dart';
@@ -21,12 +22,12 @@ class ApiService {
   // STRICT LOCALHOST MODE
   static const String _hostIp = '127.0.0.1'; 
   
-  static final String _baseUrl = 'https://dynamic-polling-backend.onrender.com';
+  static final String _baseUrl = 'https://dynamic-polling.onrender.com';
   
   // Student App URL (for sharing). Needs /#/ for Flutter Web default hashing.
   static final String studentAppBaseUrl = 'https://dynamic-polling-student-web.onrender.com/#';
 
-  static final String websocketBaseUrl = 'wss://dynamic-polling-backend.onrender.com';
+  static final String websocketBaseUrl = 'wss://dynamic-polling.onrender.com';
 
 
 
@@ -135,15 +136,47 @@ class ApiService {
     await _storage.delete(key: 'access_token');
   }
 
-  Future<List<Poll>> fetchMyPolls() async {
+  Future<void> _cachePolls(List<Poll> polls) async {
+    final prefs = await SharedPreferences.getInstance();
+    final pollsJson = jsonEncode(polls.map((p) => p.toJson()).toList());
+    await prefs.setString('cached_polls', pollsJson);
+    print('Cached ${polls.length} polls');
+  }
+
+  Future<List<Poll>> _getCachedPolls() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pollsString = prefs.getString('cached_polls');
+    if (pollsString != null) {
+      final List<dynamic> data = jsonDecode(pollsString);
+      print('Loaded ${data.length} polls from cache');
+      return data.map((json) => Poll.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  Future<List<Poll>> fetchMyPolls({bool forceRefresh = false}) async {
+    // Return cached data immediately if not forcing a refresh
+    if (!forceRefresh) {
+      // This part is tricky because we want to return cache AND fetch new data.
+      // But standard Future<List> can only return once.
+      // So here we'll just FETCH from network and Cache it.
+      // The Provider will handle the "Cache THEN Network" logic.
+      // However, to support that, we should expose both methods.
+    }
+    
     final response = await _makeAuthenticatedRequest('GET', _ApiEndpoints.polls);
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Poll.fromJson(json)).toList();
+      final polls = data.map((json) => Poll.fromJson(json)).toList();
+      _cachePolls(polls); // Cache the new data
+      return polls;
     } else {
       throw Exception('Failed to fetch polls: ${response.body}');
     }
   }
+
+  // Expose cache getter for the provider
+  Future<List<Poll>> getCachedPolls() => _getCachedPolls();
 
   Future<Poll> getPoll(int pollId) async {
     final response = await _makeAuthenticatedRequest('GET', _ApiEndpoints.pollById(pollId));
