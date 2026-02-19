@@ -122,7 +122,8 @@ async def _create_questions_for_poll(questions_data: List[schemas.QuestionCreate
             poll_id=poll_id,
             text=q_data.text,
             type=q_data.type,
-            order=i
+            order=i,
+            word_limit=q_data.word_limit
         )
         db.add(new_question)
         await db.flush()

@@ -26,7 +26,9 @@ class ApiService {
     final response = await http.get(Uri.parse('$baseUrl/polls/access/$accessCode'));
 
     if (response.statusCode == 200) {
-      return PollPublic.fromJson(jsonDecode(response.body));
+      final data = jsonDecode(response.body);
+      print('DEBUG: Poll Data: $data'); // Added debug log
+      return PollPublic.fromJson(data);
     } else if (response.statusCode == 404) {
       throw Exception('Poll not found');
     } else if (response.statusCode == 400) {
