@@ -1,14 +1,17 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-from datetime import datetime # New import
+from datetime import datetime  # New import
 from .models import QuestionType
+
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
+
 class OptionCreate(BaseModel):
     text: str
+
 
 class QuestionCreate(BaseModel):
     text: str
@@ -17,31 +20,36 @@ class QuestionCreate(BaseModel):
     word_limit: Optional[int] = None
 
 
-
 class PollCreate(BaseModel):
     title: str
     description: Optional[str] = None
     questions: List[QuestionCreate]
 
+
 class PollCreateResponse(BaseModel):
     poll_id: int
     access_code: str
 
+
 class PollStatusUpdate(BaseModel):
     is_active: bool
+
 
 class PollUpdate(BaseModel):
     title: str
     description: Optional[str] = None
+
 
 class VoteCreate(BaseModel):
     question_id: int
     response_value: str
     voter_id: Optional[str] = None
 
+
 class BatchVote(BaseModel):
     votes: List[VoteCreate]
     voter_id: Optional[str] = None
+
 
 class Option(BaseModel):
     id: int
@@ -49,6 +57,7 @@ class Option(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class Question(BaseModel):
     id: int
@@ -61,6 +70,7 @@ class Question(BaseModel):
     class Config:
         from_attributes = True
 
+
 class PollPublic(BaseModel):
     id: int
     title: str
@@ -71,13 +81,26 @@ class PollPublic(BaseModel):
     class Config:
         from_attributes = True
 
+
+class PollSummary(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    access_code: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class Poll(BaseModel):
     id: int
     title: str
     description: Optional[str] = None
     access_code: str
     is_active: bool
-    created_at: datetime # New field
+    created_at: datetime  # New field
     questions: List[Question] = []
 
     class Config:

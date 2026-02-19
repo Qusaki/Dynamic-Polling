@@ -93,9 +93,9 @@ class Poll {
       access_code: json['access_code'],
       is_active: json['is_active'],
       created_at: DateTime.parse(json['created_at']),
-      questions: (json['questions'] as List)
-          .map((i) => Question.fromJson(i))
-          .toList(),
+      questions: (json['questions'] as List?)
+          ?.map((i) => Question.fromJson(i))
+          .toList() ?? [],
     );
   }
 
