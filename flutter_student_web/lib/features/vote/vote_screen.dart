@@ -403,10 +403,8 @@ class _OpenEndedInputState extends State<_OpenEndedInput> {
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              '$_currentWordCount / ${widget.wordLimit} words',
+              '$_currentWordCount / ${widget.wordLimit} words (${widget.wordLimit! - _currentWordCount} remaining)',
               style: TextStyle(
-                // Change color if near limit to warn user? 
-                // For now, just grey unless full.
                 color: _currentWordCount >= widget.wordLimit! ? Colors.orange : Colors.grey,
                 fontWeight: FontWeight.bold,
               ),

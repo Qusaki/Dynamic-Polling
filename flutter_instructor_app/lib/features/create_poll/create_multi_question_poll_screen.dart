@@ -20,6 +20,7 @@ class PollBuilderNotifier extends StateNotifier<List<app_models.Question>> {
       type: question.type,
       options: question.options,
       order: state.length,
+      wordLimit: question.wordLimit,
     );
     state = [...state, orderedQuestion];
   }
@@ -35,6 +36,7 @@ class PollBuilderNotifier extends StateNotifier<List<app_models.Question>> {
             type: q.type,
             options: q.options,
             order: i,
+            wordLimit: q.wordLimit,
         ));
     }
     state = reorderedState;
@@ -50,6 +52,7 @@ class PollBuilderNotifier extends StateNotifier<List<app_models.Question>> {
             type: updatedQuestion.type,
             options: updatedQuestion.options,
             order: order,
+            wordLimit: updatedQuestion.wordLimit,
           )
         else
           question,
