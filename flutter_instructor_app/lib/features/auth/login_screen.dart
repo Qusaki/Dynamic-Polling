@@ -37,15 +37,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       if (_isRegistering) {
-        bool registered = await apiService.register(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-        if (registered) {
+        try {
+          await apiService.register(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
           isLoggedIn = await apiService.login(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+          return;
         }
       } else {
         print('Starting login request...');

@@ -12,6 +12,7 @@ from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, distinct
+from sqlalchemy.exc import IntegrityError
 from . import models, auth, schemas
 from .database import get_session
 from .websocket_manager import ConnectionManager
@@ -86,7 +87,11 @@ async def register_user(
     hashed_password = auth.get_password_hash(user_data.password)
     new_user = models.User(email=user_data.email, password_hash=hashed_password)
     db.add(new_user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Email already registered")
     return {"message": "User created successfully"}
 
 

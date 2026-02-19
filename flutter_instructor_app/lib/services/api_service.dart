@@ -103,13 +103,18 @@ class ApiService {
     return response;
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<void> register(String email, String password) async {
     final response = await http.post(
       Uri.parse('$_baseUrl${_ApiEndpoints.register}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-    return response.statusCode == 201;
+    
+    if (response.statusCode != 201) {
+       final body = jsonDecode(response.body);
+       final error = body['detail'] ?? 'Registration failed';
+       throw Exception(error);
+    }
   }
 
   Future<bool> login(String email, String password) async {
