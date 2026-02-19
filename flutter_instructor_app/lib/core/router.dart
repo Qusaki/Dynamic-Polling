@@ -10,13 +10,15 @@ import 'package:flutter_instructor_app/features/poll_management/poll_management_
 import 'package:flutter_instructor_app/features/dashboard/results_screen.dart';
 
 
+import 'package:flutter_instructor_app/features/splash/splash_screen.dart';
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const LoginScreen(), // Changed to LoginScreen
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: '/login',
