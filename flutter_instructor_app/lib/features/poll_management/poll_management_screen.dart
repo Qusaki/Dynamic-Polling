@@ -824,11 +824,9 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
-      return Padding(
-
-
-
-        padding: const EdgeInsets.all(16.0),
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
 
 
 
@@ -1052,6 +1050,7 @@ class _PollManagementScreenState extends ConsumerState<PollManagementScreen> {
 
 
 
+      ),
       );
 
 

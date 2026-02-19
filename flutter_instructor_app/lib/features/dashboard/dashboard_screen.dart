@@ -107,14 +107,15 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: pollsAsyncValue.when(
-        data: (polls) {
-          // Sort polls by created_at in descending order (newest first)
-          final sortedPolls = List<Poll>.from(polls)
-            ..sort((a, b) => b.created_at.compareTo(a.created_at));
+      body: SafeArea(
+        child: pollsAsyncValue.when(
+          data: (polls) {
+            // Sort polls by created_at in descending order (newest first)
+            final sortedPolls = List<Poll>.from(polls)
+              ..sort((a, b) => b.created_at.compareTo(a.created_at));
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 24.0),
             itemCount: sortedPolls.length,
             itemBuilder: (context, index) {
               final poll = sortedPolls[index];
@@ -188,6 +189,7 @@ class DashboardScreen extends ConsumerWidget {
           }
           return Center(child: Text('Error: $err'));
         },
+      ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/create-poll'),

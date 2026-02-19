@@ -221,8 +221,9 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   }
 
   Widget _buildBody() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
+    return SafeArea(
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
       itemCount: _poll!.questions.length,
       itemBuilder: (context, index) {
         final question = _poll!.questions[index];
@@ -246,6 +247,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           ),
         );
       },
+    ),
     );
   }
 

@@ -25,7 +25,8 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
-      body: Center(
+      body: SafeArea(
+        child: Center(
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -99,6 +100,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

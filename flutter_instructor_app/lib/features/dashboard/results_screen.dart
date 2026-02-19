@@ -22,11 +22,12 @@ class ResultsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Poll Results')),
-      body: resultsAsync.when(
-        data: (data) {
-          final results = data['results'] as List<dynamic>;
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
+        child: resultsAsync.when(
+          data: (data) {
+            final results = data['results'] as List<dynamic>;
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
             itemCount: results.length,
             itemBuilder: (context, index) {
               final result = results[index];
@@ -55,6 +56,7 @@ class ResultsScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
       ),
     );
   }

@@ -287,8 +287,9 @@ class _CreateMultiQuestionPollScreenState extends ConsumerState<CreateMultiQuest
             ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -345,6 +346,7 @@ class _CreateMultiQuestionPollScreenState extends ConsumerState<CreateMultiQuest
           ],
         ),
       ),
+    ),
     );
   }
 
