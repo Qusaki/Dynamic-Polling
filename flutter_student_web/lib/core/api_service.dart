@@ -7,7 +7,7 @@ import 'dart:math';
 
 class ApiService {
   // STRICT LOCALHOST MODE
-  static const String baseUrl = 'https://dynamic-polling-backend.onrender.com';
+  static const String baseUrl = 'https://dynamic-polling.onrender.com';
 
   // Simple in-memory ID for the session.
   String? _voterId;
@@ -23,7 +23,9 @@ class ApiService {
   }
 
   Future<PollPublic> getPollByAccessCode(String accessCode) async {
-    final response = await http.get(Uri.parse('$baseUrl/polls/access/$accessCode'));
+    final uri = Uri.parse('$baseUrl/polls/access/$accessCode');
+    print('Student Web: Fetching poll from $uri');
+    final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       return PollPublic.fromJson(jsonDecode(response.body));

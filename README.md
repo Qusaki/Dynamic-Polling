@@ -27,6 +27,8 @@ This project is a real-time classroom feedback system with three distinct compon
 
 ### 1. Backend Service (FastAPI)
 The central hub built with FastAPI (Python), managing authentication, complex hybrid poll structures, and handling real-time WebSocket broadcasting.
+The central hub built with FastAPI (Python), managing authentication, complex hybrid poll structures, and handling real-time WebSocket broadcasting.
+- **Hosting:** Deployed on Render (`https://dynamic-polling.onrender.com`).
 - **Framework:** FastAPI (Python)
 - **Database:** PostgreSQL (SQLAlchemy / SQLModel)
 - **Real-Time:** Native WebSockets (with `ConnectionManager` room support)
@@ -34,8 +36,11 @@ The central hub built with FastAPI (Python), managing authentication, complex hy
 
 ### 2. Instructor App (Flutter Mobile)
 A Flutter mobile application (Android/iOS) for instructors to create hybrid polls (Rating, Multiple Choice, Open-Ended), generate QR codes, and view live analytics.
+A Flutter mobile application (Android/iOS) for instructors to create hybrid polls (Rating, Multiple Choice, Open-Ended), generate QR codes, and view live analytics.
 - **Platform:** Flutter (Mobile)
-- **Key Packages:** `fl_chart` for data visualization, `qr_flutter` for QR code generation, `flutter_secure_storage` for secure token storage.
+- **Performance:** Implements local caching (`shared_preferences`) for instant loading and optimistic UI updates to handle network latency.
+- **UI:** Optimized for various screen sizes with `SafeArea` support and responsive padding.
+- **Key Packages:** `fl_chart` for data visualization, `qr_flutter` for QR code generation, `flutter_secure_storage` for secure token storage, `shared_preferences` for caching.
 
 ### 3. Student Client (Flutter Web)
 A Flutter web application (Browser-based) for students to submit anonymous responses. Students access this via a URL or QR code without needing to install an app.
@@ -51,6 +56,12 @@ A Flutter web application (Browser-based) for students to submit anonymous respo
 - **Sharing:** Generate QR codes and shareable URLs for students to join polls.
 - **Anonymous Voting:** Students can respond to polls anonymously via a web interface.
 - **Dynamic Charts:** Real-time bar charts and response lists for various question types.
+
+## Performance Optimizations
+To ensure a smooth experience even on free-tier hosting (Render):
+- **Local Caching:** Polls are cached locally using `shared_preferences`, allowing the app to load instantly even if the backend is cold.
+- **Network Timeouts:** API requests have a 30s timeout to prevent infinite hanging.
+- **Feedback Indicators:** The app detects slow server responses and informs the user if the server is waking up.
 
 ## Setup & Running
 
@@ -115,7 +126,7 @@ To get the Dynamic Polling System up and running, follow these steps:
 
 | Service | Port | URL |
 |---------|------|-----|
-| Backend API | 8000 | http://localhost:8000 |
+| Backend API | 443 | https://dynamic-polling.onrender.com |
 | Student Client | 3000 | http://localhost:3000 |
 | Instructor App | 4000 | http://localhost:4000 |
 
