@@ -64,14 +64,6 @@ class PollCard extends StatelessWidget {
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                // Show "View Results" always, or at least for closed polls
-                const PopupMenuItem<String>(
-                  value: 'results',
-                  child: ListTile(
-                    leading: Icon(Icons.bar_chart),
-                    title: Text('View Results'),
-                  ),
-                ),
                 const PopupMenuItem<String>(
                   value: 'edit',
                   child: ListTile(

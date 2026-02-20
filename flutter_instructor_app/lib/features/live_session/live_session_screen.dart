@@ -184,26 +184,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     }
   }
 
-  void _onManagePoll() async {
-    if (_poll == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Poll data not available to manage.')),
-      );
-      return;
-    }
-    if (_poll!.is_active) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please stop the live session first before editing questions.')),
-      );
-      return;
-    }
-    
-    final result = await context.push('/poll/${_poll!.id}/manage');
-    if (result == true && mounted) {
-      _disconnectWebSocket();
-      _connectWebSocket();
-    }
-  }
+
 
   AppBar _buildAppBar() {
     return AppBar(
@@ -267,11 +248,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
             icon: const Icon(Icons.share),
             label: const Text('Share'),
             onPressed: _showShareDialog,
-          ),
-          TextButton.icon(
-            icon: const Icon(Icons.settings),
-            label: const Text('Manage'),
-            onPressed: _onManagePoll,
           ),
         ],
       ),
@@ -340,6 +316,8 @@ class MultipleChoiceChart extends StatelessWidget {
     final sortedEntries = voteCounts.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key)); // Sort options alphabetically for consistent display
 
+    final totalVotes = voteCounts.values.fold(0, (sum, count) => sum + count);
+
     final barGroups = sortedEntries.asMap().entries.map((entry) {
       final index = entry.key;
       final count = entry.value.value;
@@ -353,13 +331,15 @@ class MultipleChoiceChart extends StatelessWidget {
             width: 20,
           ),
         ],
+        showingTooltipIndicators: [0], // Show tooltip for the single rod
       );
     }).toList();
 
     double maxY = 0;
     if (voteCounts.isNotEmpty) {
-      maxY = (voteCounts.values.reduce((a, b) => a > b ? a : b) * 1.2);
+      maxY = (voteCounts.values.reduce((a, b) => a > b ? a : b) * 1.5); // increased padding for the tooltips
     }
+    if (maxY == 0) maxY = 5; // give some space if there are 0 votes
 
     return SizedBox(
       height: 200,
@@ -368,6 +348,30 @@ class MultipleChoiceChart extends StatelessWidget {
           alignment: BarChartAlignment.spaceAround,
           maxY: maxY,
           barGroups: barGroups,
+          barTouchData: BarTouchData(
+            enabled: false,
+            touchTooltipData: BarTouchTooltipData(
+              tooltipBgColor: Colors.transparent,
+              tooltipPadding: EdgeInsets.zero,
+              tooltipMargin: 8,
+              getTooltipItem: (
+                BarChartGroupData group,
+                int groupIndex,
+                BarChartRodData rod,
+                int rodIndex,
+              ) {
+                final count = rod.toY.toInt();
+                final percentage = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+                return BarTooltipItem(
+                  '${percentage.toStringAsFixed(1)}%\n($count)',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
+            ),
+          ),
           titlesData: FlTitlesData(
             leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -385,6 +389,8 @@ class MultipleChoiceChart extends StatelessWidget {
               ),
             ),
           ),
+          borderData: FlBorderData(show: false),
+          gridData: const FlGridData(show: false),
         ),
       ),
     );
@@ -404,6 +410,8 @@ class RatingChart extends StatelessWidget {
     final sortedEntries = allRatings.entries.toList()
       ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
 
+    final totalVotes = voteCounts.values.fold(0, (sum, count) => sum + count);
+
     final barGroups = sortedEntries.asMap().entries.map((entry) {
       final index = entry.key; // 0-indexed for chart
       final rating = entry.value.key; // "1", "2", etc.
@@ -418,13 +426,15 @@ class RatingChart extends StatelessWidget {
             width: 20,
           ),
         ],
+        showingTooltipIndicators: [0], // Show tooltip for the single rod
       );
     }).toList();
 
     double maxY = 0;
     if (voteCounts.isNotEmpty) {
-      maxY = (voteCounts.values.reduce((a, b) => a > b ? a : b) * 1.2);
+      maxY = (voteCounts.values.reduce((a, b) => a > b ? a : b) * 1.5); // increased padding for the tooltips
     }
+    if (maxY == 0) maxY = 5; // give some space if there are 0 votes
 
     return SizedBox(
       height: 200,
@@ -433,6 +443,30 @@ class RatingChart extends StatelessWidget {
           alignment: BarChartAlignment.spaceAround,
           maxY: maxY,
           barGroups: barGroups,
+          barTouchData: BarTouchData(
+            enabled: false,
+            touchTooltipData: BarTouchTooltipData(
+              tooltipBgColor: Colors.transparent,
+              tooltipPadding: EdgeInsets.zero,
+              tooltipMargin: 8,
+              getTooltipItem: (
+                BarChartGroupData group,
+                int groupIndex,
+                BarChartRodData rod,
+                int rodIndex,
+              ) {
+                final count = rod.toY.toInt();
+                final percentage = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+                return BarTooltipItem(
+                  '${percentage.toStringAsFixed(1)}%\n($count)',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
+            ),
+          ),
           titlesData: FlTitlesData(
             leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -450,6 +484,8 @@ class RatingChart extends StatelessWidget {
               ),
             ),
           ),
+          borderData: FlBorderData(show: false),
+          gridData: const FlGridData(show: false),
         ),
       ),
     );

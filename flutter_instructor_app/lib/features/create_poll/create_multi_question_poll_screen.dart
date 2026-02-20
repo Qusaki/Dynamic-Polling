@@ -60,7 +60,7 @@ class PollBuilderNotifier extends StateNotifier<List<app_models.Question>> {
   }
 }
 
-final pollBuilderProvider = StateNotifierProvider<PollBuilderNotifier, List<app_models.Question>>((ref) {
+final pollBuilderProvider = StateNotifierProvider.autoDispose<PollBuilderNotifier, List<app_models.Question>>((ref) {
   return PollBuilderNotifier();
 });
 
