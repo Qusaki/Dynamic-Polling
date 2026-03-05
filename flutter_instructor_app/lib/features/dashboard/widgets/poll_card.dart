@@ -65,6 +65,13 @@ class PollCard extends StatelessWidget {
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
+                  value: 'results',
+                  child: ListTile(
+                    leading: Icon(Icons.analytics_outlined),
+                    title: Text('View Results'),
+                  ),
+                ),
+                const PopupMenuItem<String>(
                   value: 'edit',
                   child: ListTile(
                     leading: Icon(Icons.edit_outlined),
